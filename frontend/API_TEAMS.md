@@ -394,3 +394,4 @@ For the 6-3-5 brainstorming method:
 - Can view their own team details
 - Cannot modify team structure
 
+
