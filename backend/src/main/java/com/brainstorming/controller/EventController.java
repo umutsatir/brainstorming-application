@@ -20,16 +20,19 @@ public class EventController {
     private final TeamService teamService;
     
     @GetMapping
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<List<EventDto>> getAllEvents() {
         return ResponseEntity.ok(eventService.getAllEvents());
     }
     
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<EventDto> getEventById(@PathVariable Long id) {
         return ResponseEntity.ok(eventService.getEventById(id));
     }
     
     @PostMapping
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<EventDto> createEvent(@RequestBody CreateEventRequest request, @AuthenticationPrincipal User user) {
         // TODO: Get actual user from security context. For now assuming we have it.
         // If @AuthenticationPrincipal is not working yet, we might need adjustments.
@@ -53,14 +56,31 @@ public class EventController {
     }
     
     @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<EventDto> updateEvent(@PathVariable Long id, @RequestBody CreateEventRequest request) {
         return ResponseEntity.ok(eventService.updateEvent(id, request));
     }
     
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
         return ResponseEntity.noContent().build();
+    }
+    
+    @PostMapping("/{eventId}/teams")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
+    public ResponseEntity<TeamDto> createTeam(@PathVariable Long eventId, @RequestBody CreateTeamRequest request) {
+        request.setEventId(eventId);
+        // Placeholder for leaderId until Auth is fully set
+        Long leaderId = 1L; 
+        return ResponseEntity.ok(teamService.createTeam(request, leaderId));
+    }
+    
+    @GetMapping("/{eventId}/teams")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
+    public ResponseEntity<List<TeamDto>> getEventTeams(@PathVariable Long eventId) {
+        return ResponseEntity.ok(eventService.getEventTeams(eventId));
     }
     
 }
