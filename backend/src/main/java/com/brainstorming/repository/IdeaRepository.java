@@ -18,4 +18,8 @@ public interface IdeaRepository extends JpaRepository<Idea, Long> {
     List<Idea> findByTeamId(Long teamId);
     
     List<Idea> findBySessionIdAndRoundId(Long sessionId, Long roundId);
+    
+    List<Idea> findByRoundIdAndAuthorId(Long roundId, Long authorId);
+    
+    boolean existsByRoundIdAndAuthorId(Long roundId, Long authorId);
 }
