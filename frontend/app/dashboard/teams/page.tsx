@@ -13,8 +13,8 @@ import { DeleteConfirmationModal } from "@/components/teams/DeleteConfirmationMo
 interface Team {
   id: number;
   name: string;
-  memberCount: number;
-  leaderName: string;
+  member_count: number;
+  leader_name: string;
   focus: string;
   capacity: number;
 }

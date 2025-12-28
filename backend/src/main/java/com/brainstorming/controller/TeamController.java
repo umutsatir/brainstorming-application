@@ -25,11 +25,6 @@ public class TeamController {
     private final SessionService sessionService;
     private final TeamService teamService;
 
-    public TeamController(UserRepository userRepository, SessionService sessionService) {
-        this.userRepository = userRepository;
-        this.sessionService = sessionService;
-    }
-
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth.getName();
@@ -93,11 +88,10 @@ public class TeamController {
             @Valid @RequestBody CreateSessionRequest request) {
         User currentUser = getCurrentUser();
         SessionDto session = sessionService.createSessionForTeam(
-                teamId, 
-                request.getTopicId(), 
-                request.getRoundCount(), 
-                currentUser.getId()
-        );
+                teamId,
+                request.getTopicId(),
+                request.getRoundCount(),
+                currentUser.getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(session);
     }
 

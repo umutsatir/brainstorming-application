@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 
 interface Participant {
   id: number;
-  fullName: string;
+  full_name: string;
   role: string;
   status: string;
 }
@@ -57,7 +57,7 @@ export function ParticipantsList({ teamId }: { teamId: number | null }) {
   };
 
   const filteredParticipants = participants.filter(p => 
-    p.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.role?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -95,10 +95,10 @@ export function ParticipantsList({ teamId }: { teamId: number | null }) {
                     <div key={p.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-grab group transition-colors">
                         <GripHorizontal className="text-gray-300 h-4 w-4 opacity-0 group-hover:opacity-100" />
                         <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium text-sm">
-                            {getInitials(p.fullName)}
+                            {getInitials(p.full_name)}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm text-gray-900 truncate">{p.fullName}</div>
+                            <div className="font-medium text-sm text-gray-900 truncate">{p.full_name}</div>
                             <div className="text-xs text-gray-500 truncate">{p.role}</div>
                         </div>
                         

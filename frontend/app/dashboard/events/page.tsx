@@ -13,9 +13,9 @@ interface Event {
     id: number;
     name: string;
     description: string;
-    startDate: string;
-    endDate: string;
-    ownerName: string;
+    start_date: string;
+    end_date: string;
+    owner_name: string;
 }
 
 export default function EventsPage() {

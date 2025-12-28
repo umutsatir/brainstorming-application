@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 interface TeamProps {
   id: number;
   name: string;
-  memberCount: number;
-  leaderName: string;
+  member_count: number;
+  leader_name: string;
   focus: string;
   capacity: number;
 }
@@ -28,9 +28,9 @@ export function TeamCard({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const capacity = team.capacity || 6; 
-  const isFull = team.memberCount >= capacity;
+  const isFull = team.member_count >= capacity;
   const status = isFull ? "Full" : "Open";
-  const progress = (team.memberCount / capacity) * 100;
+  const progress = (team.member_count / capacity) * 100;
   
   return (
     <div 
@@ -41,7 +41,7 @@ export function TeamCard({
             <div>
                 <h3 className="font-bold text-lg text-gray-900">{team.name}</h3>
                 <p className="text-xs text-gray-500 mt-1">Focus: {team.focus}</p>
-                <p className="text-xs text-gray-400">Leader: {team.leaderName || "Unassigned"}</p>
+                <p className="text-xs text-gray-400">Leader: {team.leader_name || "Unassigned"}</p>
             </div>
             
             <div className="relative">
@@ -98,7 +98,7 @@ export function TeamCard({
         </div>
         
         <div className="flex items-center justify-between text-sm">
-            <span className="font-medium text-gray-700">{team.memberCount}/{capacity} Members</span>
+            <span className="font-medium text-gray-700">{team.member_count}/{capacity} Members</span>
             <span className={`font-medium text-xs px-2 py-0.5 rounded-full ${isFull ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'}`}>
                 {status}
             </span>
@@ -117,12 +117,12 @@ export function TeamCard({
                 {/* Placeholder avatars since checking members requires separate API call per team currently (n+1 problem). 
                     Ideally backend returns members or we fetch them. 
                     For this card I will just show placeholders based on count. */}
-                {Array.from({ length: Math.min(3, team.memberCount) }).map((_, i) => (
+                {Array.from({ length: Math.min(3, team.member_count) }).map((_, i) => (
                     <div key={i} className="h-8 w-8 rounded-full ring-2 ring-white bg-gray-200" />
                 ))}
-                {team.memberCount > 3 && (
+                {team.member_count > 3 && (
                     <div className="h-8 w-8 rounded-full ring-2 ring-white bg-gray-100 flex items-center justify-center text-xs text-gray-500 font-medium">
-                        +{team.memberCount - 3}
+                        +{team.member_count - 3}
                     </div>
                 )}
              </div>

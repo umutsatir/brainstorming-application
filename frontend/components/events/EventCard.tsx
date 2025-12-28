@@ -8,9 +8,9 @@ interface EventProps {
   id: number;
   name: string;
   description: string;
-  startDate: string;
-  endDate: string;
-  ownerName: string;
+  start_date: string;
+  end_date: string;
+  owner_name: string;
 }
 
 interface EventCardProps {
@@ -61,12 +61,12 @@ export function EventCard({ event, onDelete, onEdit, canManage }: EventCardProps
           <div className="flex items-center gap-2">
             <Calendar className="h-3.5 w-3.5" />
             <span>
-              {new Date(event.startDate).toLocaleDateString()} - {new Date(event.endDate).toLocaleDateString()}
+              {new Date(event.start_date).toLocaleDateString()} - {new Date(event.end_date).toLocaleDateString()}
             </span>
           </div>
           <div className="flex items-center gap-2">
             <User className="h-3.5 w-3.5" />
-            <span>Owner: {event.ownerName || "Unknown"}</span>
+            <span>Owner: {event.owner_name || "Unknown"}</span>
           </div>
         </div>
       </div>
