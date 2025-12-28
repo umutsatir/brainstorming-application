@@ -49,20 +49,24 @@ public class TeamService {
     public TeamDto createTeam(CreateTeamRequest request, Long leaderId) {
         Event event = eventRepository.findById(request.getEventId())
                 .orElseThrow(() -> new RuntimeException("Event not found"));
-        
+
         User leader = userRepository.findById(leaderId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         Team team = new Team();
         team.setName(request.getName());
+        team.setFocus(request.getFocus());
+        if (request.getCapacity() != null) {
+            team.setCapacity(request.getCapacity());
+        }
         team.setEvent(event);
         team.setLeader(leader);
 
         Team savedTeam = teamRepository.save(team);
-        
+
         // Add leader as a member automatically
         addMembers(savedTeam.getId(), Collections.singletonList(leaderId));
-        
+
         return teamMapper.toDto(savedTeam);
     }
 
@@ -73,9 +77,17 @@ public class TeamService {
         if (request.getName() != null) {
             team.setName(request.getName());
         }
-        // Assuming leader update is logic heavy or handled separately, but simple field update here:
-        // if (request.getLeaderId() != null) ... (Need to fetch user etc. keeping simple for now)
-        
+        if (request.getFocus() != null) {
+            team.setFocus(request.getFocus());
+        }
+        if (request.getCapacity() != null) {
+            team.setCapacity(request.getCapacity());
+        }
+        // Assuming leader update is logic heavy or handled separately, but simple field
+        // update here:
+        // if (request.getLeaderId() != null) ... (Need to fetch user etc. keeping
+        // simple for now)
+
         return teamMapper.toDto(teamRepository.save(team));
     }
 
@@ -84,7 +96,7 @@ public class TeamService {
                 .orElseThrow(() -> new RuntimeException("Team not found"));
         teamRepository.delete(team);
     }
-    
+
     public List<UserDto> getTeamMembers(Long teamId) {
         List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
         return members.stream()
@@ -96,18 +108,18 @@ public class TeamService {
     public void addMembers(Long teamId, List<Long> userIds) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
-                
+
         for (Long userId : userIds) {
-             User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found: " + userId));
-             
-             // Check if already member
-             if (teamMemberRepository.findByTeamIdAndUserId(teamId, userId).isEmpty()) {
-                 TeamMember member = new TeamMember();
-                 member.setTeam(team);
-                 member.setUser(user);
-                 teamMemberRepository.save(member);
-             }
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found: " + userId));
+
+            // Check if already member
+            if (teamMemberRepository.findByTeamIdAndUserId(teamId, userId).isEmpty()) {
+                TeamMember member = new TeamMember();
+                member.setTeam(team);
+                member.setUser(user);
+                teamMemberRepository.save(member);
+            }
         }
     }
 

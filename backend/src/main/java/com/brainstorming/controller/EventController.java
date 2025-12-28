@@ -19,6 +19,7 @@ public class EventController {
 
     private final EventService eventService;
     private final TeamService teamService;
+    private final com.brainstorming.repository.UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('EVENT_MANAGER')")
@@ -75,11 +76,14 @@ public class EventController {
 
     @PostMapping("/{eventId}/teams")
     @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
-    public ResponseEntity<TeamDto> createTeam(@PathVariable Long eventId, @RequestBody CreateTeamRequest request) {
+    public ResponseEntity<TeamDto> createTeam(@PathVariable Long eventId, @RequestBody CreateTeamRequest request,
+            java.security.Principal principal) {
         request.setEventId(eventId);
-        // Placeholder for leaderId until Auth is fully set
-        Long leaderId = 1L;
-        return ResponseEntity.ok(teamService.createTeam(request, leaderId));
+
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new com.brainstorming.exception.ResourceNotFoundException("User not found"));
+
+        return ResponseEntity.ok(teamService.createTeam(request, user.getId()));
     }
 
     @GetMapping("/{eventId}/teams")

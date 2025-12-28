@@ -23,10 +23,17 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle errors globally if needed
+// Add a response interceptor to handle errors globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response && error.response.status === 401) {
+      // Token is invalid or expired
+      localStorage.removeItem('token');
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     return Promise.reject(error);
   }
 );
