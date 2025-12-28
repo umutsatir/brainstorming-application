@@ -59,7 +59,7 @@ public class TeamController {
 
     @GetMapping("/{id}/members")
     @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
-    public ResponseEntity<List<UserDto>> getTeamMembers(@PathVariable Long id) {
+    public ResponseEntity<List<TeamMemberResponseDto>> getTeamMembers(@PathVariable Long id) {
         return ResponseEntity.ok(teamService.getTeamMembers(id));
     }
 
@@ -75,6 +75,20 @@ public class TeamController {
     public ResponseEntity<Void> removeTeamMember(@PathVariable Long id, @PathVariable Long userId) {
         teamService.removeMember(id, userId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * PUT /teams/{teamId}/leader/{userId}
+     * Promote a team member to team leader.
+     * Only EVENT_MANAGER can perform this action.
+     */
+    @PutMapping("/{teamId}/leader/{userId}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<TeamDto> promoteToLeader(
+            @PathVariable Long teamId,
+            @PathVariable Long userId) {
+        TeamDto updatedTeam = teamService.promoteToLeader(teamId, userId);
+        return ResponseEntity.ok(updatedTeam);
     }
 
     /**

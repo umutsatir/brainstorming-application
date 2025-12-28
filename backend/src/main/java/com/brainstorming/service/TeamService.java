@@ -97,10 +97,25 @@ public class TeamService {
         teamRepository.delete(team);
     }
 
-    public List<UserDto> getTeamMembers(Long teamId) {
+    public List<TeamMemberResponseDto> getTeamMembers(Long teamId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+        Long leaderId = team.getLeader().getId();
+        
         List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
         return members.stream()
-                .map(member -> userMapper.toDto(member.getUser()))
+                .map(member -> {
+                    User user = member.getUser();
+                    boolean isLeader = user.getId().equals(leaderId);
+                    return TeamMemberResponseDto.builder()
+                            .id(user.getId())
+                            .fullName(user.getFullName())
+                            .email(user.getEmail())
+                            .role(isLeader ? "TEAM_LEADER" : "TEAM_MEMBER")
+                            .status(user.getStatus())
+                            .isTeamLeader(isLeader)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -128,5 +143,28 @@ public class TeamService {
         TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, userId)
                 .orElseThrow(() -> new RuntimeException("Member not found in team"));
         teamMemberRepository.delete(member);
+    }
+
+    /**
+     * Promote a team member to team leader.
+     * The current leader becomes a regular team member.
+     */
+    @Transactional
+    public TeamDto promoteToLeader(Long teamId, Long newLeaderId) {
+        Team team = teamRepository.findById(teamId)
+                .orElseThrow(() -> new RuntimeException("Team not found"));
+
+        User newLeader = userRepository.findById(newLeaderId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Verify the new leader is a member of this team
+        TeamMember newLeaderMember = teamMemberRepository.findByTeamIdAndUserId(teamId, newLeaderId)
+                .orElseThrow(() -> new RuntimeException("User is not a member of this team"));
+
+        // Update the team leader
+        team.setLeader(newLeader);
+        Team savedTeam = teamRepository.save(team);
+
+        return teamMapper.toDto(savedTeam);
     }
 }
