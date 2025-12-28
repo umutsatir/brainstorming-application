@@ -1,0 +1,170 @@
+# Brainstorming API Test Requests
+# Use VS Code REST Client extension to run these
+
+### =====================
+### AUTHENTICATION
+### =====================
+
+### Register a new user
+POST http://localhost:8080/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123",
+  "fullName": "Test User"
+}
+
+### Login
+# @name login
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "password": "password123"
+}
+
+### Store the token from login response
+@token = {{login.response.body.token}}
+
+### =====================
+### SESSIONS (Section 6)
+### =====================
+
+### 6.1 Create Session for Team
+POST http://localhost:8080/api/teams/1/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "topicId": 1,
+  "roundCount": 5
+}
+
+### 6.2 Get Session by ID
+GET http://localhost:8080/api/sessions/1
+Authorization: Bearer {{token}}
+
+### Get Session State (detailed)
+GET http://localhost:8080/api/sessions/1/state
+Authorization: Bearer {{token}}
+
+### 6.3 Get Team Sessions
+GET http://localhost:8080/api/teams/1/sessions
+Authorization: Bearer {{token}}
+
+### 6.3 Get Team Sessions with Status Filter
+GET http://localhost:8080/api/teams/1/sessions?status=PENDING
+Authorization: Bearer {{token}}
+
+### 6.4 Control Session - START
+PATCH http://localhost:8080/api/sessions/1/control
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "action": "start"
+}
+
+### 6.4 Control Session - PAUSE
+PATCH http://localhost:8080/api/sessions/1/control
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "action": "pause"
+}
+
+### 6.4 Control Session - RESUME
+PATCH http://localhost:8080/api/sessions/1/control
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "action": "resume"
+}
+
+### 6.4 Control Session - END
+PATCH http://localhost:8080/api/sessions/1/control
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "action": "end"
+}
+
+### 6.5 Advance Round
+POST http://localhost:8080/api/sessions/1/rounds/1/advance
+Authorization: Bearer {{token}}
+
+### 6.6 Get All Rounds for Session
+GET http://localhost:8080/api/sessions/1/rounds
+Authorization: Bearer {{token}}
+
+### 6.7 Get Single Round Detail
+GET http://localhost:8080/api/sessions/1/rounds/1
+Authorization: Bearer {{token}}
+
+### =====================
+### IDEAS (Section 7)
+### =====================
+
+### 7.1 Get Round Ideas (with submission status)
+GET http://localhost:8080/api/sessions/1/rounds/1/ideas
+Authorization: Bearer {{token}}
+
+### 7.2 Submit Ideas (3 required)
+POST http://localhost:8080/api/sessions/1/rounds/1/ideas
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ideas": [
+    "First innovative idea for the topic",
+    "Second creative solution approach",
+    "Third unique perspective on the problem"
+  ]
+}
+
+### Get Previous Teammate Ideas
+GET http://localhost:8080/api/sessions/1/rounds/2/previous-ideas
+Authorization: Bearer {{token}}
+
+### 7.3 Update Idea (PATCH)
+PATCH http://localhost:8080/api/ideas/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "text": "Updated idea text after review"
+}
+
+### 7.4 Get All Session Ideas (grouped by round/participant)
+GET http://localhost:8080/api/sessions/1/ideas
+Authorization: Bearer {{token}}
+
+### Get Single Idea
+GET http://localhost:8080/api/ideas/1
+Authorization: Bearer {{token}}
+
+### Delete Idea
+DELETE http://localhost:8080/api/ideas/1
+Authorization: Bearer {{token}}
+
+### =====================
+### TEAMS
+### =====================
+
+### Get All Teams
+GET http://localhost:8080/api/teams
+Authorization: Bearer {{token}}
+
+### Get Team by ID
+GET http://localhost:8080/api/teams/1
+Authorization: Bearer {{token}}
+
+### Get Team Members
+GET http://localhost:8080/api/teams/1/members
+Authorization: Bearer {{token}}
