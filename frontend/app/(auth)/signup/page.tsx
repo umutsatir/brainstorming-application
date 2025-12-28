@@ -17,13 +17,6 @@ export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const token = localStorage.getItem("token")
-    if (token) {
-      router.push("/")
-    }
-  }, [router])
-
   const [formData, setFormData] = useState({
     fullName: "",
     organization: "",
