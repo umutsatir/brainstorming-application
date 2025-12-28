@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,14 +12,27 @@ interface CreateTeamModalProps {
   onClose: () => void;
   onSuccess: () => void;
   eventId: number;
+  initialData?: any;
 }
 
-export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId }: CreateTeamModalProps) {
+export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId, initialData }: CreateTeamModalProps) {
   const [name, setName] = useState("");
   const [focus, setFocus] = useState("");
   const [capacity, setCapacity] = useState("6");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialData) {
+        setName(initialData.name || "");
+        setFocus(initialData.focus || "");
+        setCapacity(initialData.capacity?.toString() || "6");
+    } else {
+        setName("");
+        setFocus("");
+        setCapacity("6");
+    }
+  }, [initialData, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,20 +40,32 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId }: CreateT
     setError(null);
 
     try {
-      // Use dynamic eventId
-      await api.post(`/events/${eventId}/teams`, {
-        name,
-        focus,
-        capacity: parseInt(capacity),
-      });
+      if (initialData?.id) {
+          // Edit Mode
+          await api.patch(`/teams/${initialData.id}`, {
+             name,
+             focus,
+             capacity: parseInt(capacity),
+             eventId 
+          });
+      } else {
+          // Create Mode
+          await api.post(`/events/${eventId}/teams`, {
+            name,
+            focus,
+            capacity: parseInt(capacity),
+          });
+      }
       onSuccess();
       onClose();
-      setName("");
-      setFocus("");
-      setCapacity("6");
+      if (!initialData) {
+        setName("");
+        setFocus("");
+        setCapacity("6");
+      }
     } catch (err: any) {
-        console.error("Create team error:", err);
-        setError(err.response?.data?.message || "Failed to create team");
+        console.error("Save team error:", err);
+        setError(err.response?.data?.message || "Failed to save team");
     } finally {
         setLoading(false);
     }
@@ -53,8 +78,8 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId }: CreateT
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 overflow-hidden scale-100 animate-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
                 <div>
-                     <h2 className="text-xl font-bold text-gray-900">Create New Team</h2>
-                     <p className="text-sm text-gray-500 mt-1">Add a new collaborative group to this event.</p>
+                     <h2 className="text-xl font-bold text-gray-900">{initialData ? "Edit Team" : "Create New Team"}</h2>
+                     <p className="text-sm text-gray-500 mt-1">{initialData ? "Update team details." : "Add a new collaborative group to this event."}</p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-gray-200/50">
                     <X className="h-4 w-4 text-gray-500" />
@@ -113,7 +138,7 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId }: CreateT
                         Cancel
                     </Button>
                     <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 px-6" disabled={loading}>
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Team"}
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (initialData ? "Update Team" : "Create Team")}
                     </Button>
                 </div>
             </form>

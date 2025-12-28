@@ -122,13 +122,6 @@ export function ParticipantsList({ teamId }: { teamId: number | null }) {
                 </div>
             )}
         </div>
-
-         <div className="p-4 border-t border-gray-100 bg-gray-50">
-            <Button variant="outline" className="w-full justify-center">
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Select Multiple
-            </Button>
-        </div>
      </div>
   );
 }

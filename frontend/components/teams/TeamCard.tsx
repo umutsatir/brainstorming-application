@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoreHorizontal, Plus, Lock, Trash2 } from "lucide-react";
+import { MoreHorizontal, Plus, Lock, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TeamProps {
@@ -16,12 +16,14 @@ export function TeamCard({
     isSelected,
     onClick,
     onDelete,
+    onEdit,
     canDelete = false
 }: { 
     team: TeamProps;
     isSelected: boolean;
     onClick: () => void;
     onDelete: () => void;
+    onEdit: (team: TeamProps) => void;
     canDelete?: boolean;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -67,6 +69,17 @@ export function TeamCard({
                             }} 
                         />
                         <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-100 z-20 overflow-hidden">
+                             <button 
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsMenuOpen(false);
+                                    onEdit(team);
+                                }}
+                            >
+                                <Pencil className="h-3 w-3" />
+                                Edit
+                            </button>
                             <button 
                                 className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
                                 onClick={(e) => {

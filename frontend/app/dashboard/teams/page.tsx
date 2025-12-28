@@ -24,9 +24,11 @@ export default function TeamsPage() {
   const searchParams = useSearchParams();
   const eventId = searchParams.get("eventId");
 
+  /* State */
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false); // Start false, wait for eventId
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editTeam, setEditTeam] = useState<Team | undefined>(undefined);
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null);
   
   // Delete Modal State
@@ -69,7 +71,7 @@ export default function TeamsPage() {
     }
   }, []);
 
-  const canDelete = userRole === "EVENT_MANAGER" || userRole === "ROLE_EVENT_MANAGER";
+  const canDelete = userRole === "EVENT_MANAGER" || userRole === "ROLE_EVENT_MANAGER" || userRole === "TEAM_LEADER" || userRole === "ROLE_TEAM_LEADER";
 
   const handleTeamClick = (id: number) => {
       if (selectedTeamId === id) {
@@ -77,6 +79,16 @@ export default function TeamsPage() {
       } else {
           setSelectedTeamId(id);
       }
+  };
+
+  const handleEditClick = (team: Team) => {
+      setEditTeam(team);
+      setIsCreateModalOpen(true);
+  };
+
+  const handleCreateClick = () => {
+      setEditTeam(undefined);
+      setIsCreateModalOpen(true);
   };
 
   const confirmDelete = (id: number) => {
@@ -117,7 +129,7 @@ export default function TeamsPage() {
                 <div className="flex items-center gap-3">
                     <Button 
                         className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:translate-y-[-1px]"
-                        onClick={() => setIsCreateModalOpen(true)}
+                        onClick={handleCreateClick}
                         disabled={!eventId}
                     >
                         <Plus className="mr-2 h-4 w-4" />
@@ -176,6 +188,7 @@ export default function TeamsPage() {
                                         isSelected={selectedTeamId === team.id}
                                         onClick={() => handleTeamClick(team.id)}
                                         onDelete={() => confirmDelete(team.id)}
+                                        onEdit={() => handleEditClick(team)}
                                         canDelete={canDelete}
                                     />
                                 ))}
@@ -183,7 +196,7 @@ export default function TeamsPage() {
                                 {/* Add Team Card */}
                                 <div 
                                     className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center gap-2 h-full min-h-[200px] hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer group"
-                                    onClick={() => setIsCreateModalOpen(true)}
+                                    onClick={handleCreateClick}
                                 >
                                     <div className="h-12 w-12 rounded-full bg-gray-50 group-hover:bg-blue-100 flex items-center justify-center text-gray-400 group-hover:text-blue-600 transition-colors">
                                         <Plus className="h-6 w-6" />
@@ -202,6 +215,7 @@ export default function TeamsPage() {
             onClose={() => setIsCreateModalOpen(false)}
             onSuccess={fetchTeams}
             eventId={Number(eventId)}
+            initialData={editTeam}
         />
         
         <DeleteConfirmationModal 
