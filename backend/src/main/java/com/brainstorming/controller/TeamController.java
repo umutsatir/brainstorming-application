@@ -9,16 +9,21 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import com.brainstorming.service.TeamService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/teams")
+@RequiredArgsConstructor
 public class TeamController {
 
     private final UserRepository userRepository;
     private final SessionService sessionService;
+    private final TeamService teamService;
 
     public TeamController(UserRepository userRepository, SessionService sessionService) {
         this.userRepository = userRepository;
@@ -33,50 +38,47 @@ public class TeamController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('EVENT_MANAGER')") // Assuming admin only for listing all
     public ResponseEntity<List<TeamDto>> getAllTeams() {
-        // TODO: Implement get all teams
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(teamService.getAllTeams());
     }
-    
+
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
     public ResponseEntity<TeamDto> getTeamById(@PathVariable Long id) {
-        // TODO: Implement get team by id
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(teamService.getTeamById(id));
     }
-    
-    @PostMapping
-    public ResponseEntity<TeamDto> createTeam(@RequestBody CreateTeamRequest request) {
-        // TODO: Implement create team
-        return ResponseEntity.ok().build();
-    }
-    
-    @PutMapping("/{id}")
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
     public ResponseEntity<TeamDto> updateTeam(@PathVariable Long id, @RequestBody CreateTeamRequest request) {
-        // TODO: Implement update team
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(teamService.updateTeam(id, request));
     }
-    
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
     public ResponseEntity<Void> deleteTeam(@PathVariable Long id) {
-        // TODO: Implement delete team
+        teamService.deleteTeam(id);
         return ResponseEntity.noContent().build();
     }
-    
+
     @GetMapping("/{id}/members")
-    public ResponseEntity<List<TeamMemberDto>> getTeamMembers(@PathVariable Long id) {
-        // TODO: Implement get team members
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
+    public ResponseEntity<List<UserDto>> getTeamMembers(@PathVariable Long id) {
+        return ResponseEntity.ok(teamService.getTeamMembers(id));
+    }
+
+    @PostMapping("/{id}/members")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
+    public ResponseEntity<Void> addTeamMembers(@PathVariable Long id, @RequestBody List<Long> userIds) {
+        teamService.addMembers(id, userIds);
         return ResponseEntity.ok().build();
     }
-    
-    @PostMapping("/{id}/members/{userId}")
-    public ResponseEntity<TeamMemberDto> addTeamMember(@PathVariable Long id, @PathVariable Long userId) {
-        // TODO: Implement add team member
-        return ResponseEntity.ok().build();
-    }
-    
+
     @DeleteMapping("/{id}/members/{userId}")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
     public ResponseEntity<Void> removeTeamMember(@PathVariable Long id, @PathVariable Long userId) {
-        // TODO: Implement remove team member
+        teamService.removeMember(id, userId);
         return ResponseEntity.noContent().build();
     }
 
