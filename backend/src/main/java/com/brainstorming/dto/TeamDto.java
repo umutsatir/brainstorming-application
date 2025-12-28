@@ -15,6 +15,8 @@ public class TeamDto {
     private Long leaderId;
     private String leaderName;
     private Integer memberCount;
+    private String focus;
+    private Integer capacity;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

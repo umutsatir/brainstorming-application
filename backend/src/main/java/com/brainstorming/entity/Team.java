@@ -33,6 +33,13 @@ public class Team {
     @JoinColumn(name = "leader_id", nullable = false)
     private User leader;
 
+    @Column(length = 128)
+    private String focus;
+
+    @Builder.Default
+    @Column(nullable = false, columnDefinition = "TINYINT")
+    private Integer capacity = 6;
+
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TeamMember> members = new ArrayList<>();
