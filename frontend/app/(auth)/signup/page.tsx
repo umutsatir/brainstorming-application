@@ -35,9 +35,9 @@ export default function SignupPage() {
     setError(null)
 
     try {
-      // Map frontend fields to backend expected payload
+      // Map frontend fields to backend expected payload (using snake_case for backend)
       const payload = {
-        fullName: formData.fullName,
+        full_name: formData.fullName,
         email: formData.email,
         password: formData.password,
         // Organization is not sent as per plan

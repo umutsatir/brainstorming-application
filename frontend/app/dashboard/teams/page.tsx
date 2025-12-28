@@ -158,7 +158,11 @@ export default function TeamsPage() {
                 <>
                     {/* Left Column: Participants */}
                     <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-4">
-                         <ParticipantsList teamId={selectedTeamId} />
+                         <ParticipantsList 
+                             teamId={selectedTeamId} 
+                             userRole={userRole}
+                             onTeamUpdated={fetchTeams}
+                         />
                     </div>
 
                     {/* Right Column: Teams Grid */}
