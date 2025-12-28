@@ -35,6 +35,28 @@ public class EventService {
     private final TeamMapper teamMapper;
     private final TopicMapper topicMapper;
 
+    public List<EventDto> getAllEvents(User user) {
+        // Fix: Compare Enum properly
+        if (user == null || user.getRole() == User.Role.EVENT_MANAGER) {
+            return eventRepository.findAll().stream()
+                    .map(eventMapper::toDto)
+                    .collect(Collectors.toList());
+        }
+
+        // If TEAM_LEADER, find teams they lead and return unique events
+        if (user.getRole() == User.Role.TEAM_LEADER) {
+            List<Team> teams = teamRepository.findByLeaderId(user.getId());
+            return teams.stream()
+                    .map(Team::getEvent)
+                    .distinct() // Ensure unique events
+                    .map(eventMapper::toDto)
+                    .collect(Collectors.toList());
+        }
+
+        // Default: return empty
+        return List.of();
+    }
+
     public List<EventDto> getAllEvents() {
         return eventRepository.findAll().stream()
                 .map(eventMapper::toDto)
@@ -99,6 +121,5 @@ public class EventService {
                 .map(teamMapper::toDto)
                 .collect(Collectors.toList());
     }
-
 
 }

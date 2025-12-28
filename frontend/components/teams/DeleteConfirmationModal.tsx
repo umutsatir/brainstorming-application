@@ -8,9 +8,18 @@ interface DeleteConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   loading?: boolean;
+  title?: string;
+  description?: string;
 }
 
-export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, loading = false }: DeleteConfirmationModalProps) {
+export function DeleteConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  loading = false,
+  title = "Delete Team?",
+  description = "This action cannot be undone. All data associated with this team will be permanently removed."
+}: DeleteConfirmationModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -22,9 +31,9 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, loading = 
                 </div>
                 
                 <div className="space-y-2">
-                    <h2 className="text-xl font-bold text-gray-900">Delete Team?</h2>
+                    <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                     <p className="text-sm text-gray-500 leading-relaxed px-2">
-                        This action cannot be undone. All data associated with this team will be permanently removed.
+                        {description}
                     </p>
                 </div>
 
@@ -43,7 +52,7 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, loading = 
                         onClick={onConfirm}
                         disabled={loading}
                     >
-                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Team"}
+                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete"}
                     </Button>
                 </div>
             </div>

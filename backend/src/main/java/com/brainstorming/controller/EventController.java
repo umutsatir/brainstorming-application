@@ -22,9 +22,15 @@ public class EventController {
     private final com.brainstorming.repository.UserRepository userRepository;
 
     @GetMapping
-    @PreAuthorize("hasRole('EVENT_MANAGER')")
-    public ResponseEntity<List<EventDto>> getAllEvents() {
-        return ResponseEntity.ok(eventService.getAllEvents());
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
+    public ResponseEntity<List<EventDto>> getAllEvents(java.security.Principal principal) {
+        if (principal == null) {
+            // Should be handled by security filter, but safe guard
+            return ResponseEntity.ok(eventService.getAllEvents());
+        }
+        User user = userRepository.findByEmail(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(eventService.getAllEvents(user));
     }
 
     @GetMapping("/{id}")

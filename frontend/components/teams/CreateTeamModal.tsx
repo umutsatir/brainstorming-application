@@ -11,9 +11,10 @@ interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  eventId: number;
 }
 
-export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalProps) {
+export function CreateTeamModal({ isOpen, onClose, onSuccess, eventId }: CreateTeamModalProps) {
   const [name, setName] = useState("");
   const [focus, setFocus] = useState("");
   const [capacity, setCapacity] = useState("6");
@@ -26,8 +27,8 @@ export function CreateTeamModal({ isOpen, onClose, onSuccess }: CreateTeamModalP
     setError(null);
 
     try {
-      // Hardcoded eventId = 1 as per plan
-      await api.post("/events/1/teams", {
+      // Use dynamic eventId
+      await api.post(`/events/${eventId}/teams`, {
         name,
         focus,
         capacity: parseInt(capacity),
