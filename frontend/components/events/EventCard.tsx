@@ -1,6 +1,6 @@
 "use client";
 
-import { Calendar, Trash2, ArrowRight, User, Pencil } from "lucide-react";
+import { Calendar, Trash2, ArrowRight, User, Pencil, MessageSquare, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 
@@ -25,6 +25,11 @@ export function EventCard({ event, onDelete, onEdit, canManage }: EventCardProps
 
   const handleCardClick = () => {
     router.push(`/dashboard/teams?eventId=${event.id}`);
+  };
+
+  const handleTopicsClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/dashboard/topics?eventId=${event.id}`);
   };
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -71,28 +76,46 @@ export function EventCard({ event, onDelete, onEdit, canManage }: EventCardProps
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-50">
-        <span className="text-sm font-medium text-blue-600 flex items-center gap-1 group-hover:gap-2 transition-all">
-          View Teams <ArrowRight className="h-4 w-4" />
-        </span>
+      <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
+        <div className="flex gap-2 w-full">
+             <Button 
+                variant="secondary"
+                size="sm"
+                className="flex-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm"
+                onClick={handleTopicsClick}
+            >
+                <MessageSquare className="mr-2 h-3.5 w-3.5" /> Topics
+            </Button>
+            <Button 
+                variant="secondary"
+                size="sm"
+                className="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-100 border border-blue-100 shadow-sm"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/dashboard/teams?eventId=${event.id}`);
+                }}
+            >
+                <Users className="mr-2 h-3.5 w-3.5" /> Teams
+            </Button>
+        </div>
         
         {canManage && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center border-l border-gray-200 pl-2 ml-1">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                    className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
                     onClick={handleEdit}
                 >
-                    <Pencil className="h-4 w-4" />
+                    <Pencil className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
                     onClick={handleDelete}
                 >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                 </Button>
             </div>
         )}
