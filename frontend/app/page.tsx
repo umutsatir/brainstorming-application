@@ -86,6 +86,26 @@ export default function Home() {
      }
   }, []);
 
+  // Auto-refresh active session every 5 seconds
+  useEffect(() => {
+      if (!team) return;
+
+      const interval = setInterval(async () => {
+          try {
+              const sessionsRes = await api.get(`/teams/${team.id}/sessions?status=RUNNING`);
+              if (sessionsRes.data && sessionsRes.data.length > 0) {
+                  setActiveSession(sessionsRes.data[0]);
+              } else {
+                  setActiveSession(null);
+              }
+          } catch (error) {
+              console.error("Failed to refresh active session", error);
+          }
+      }, 5000); // Check every 5 seconds
+
+      return () => clearInterval(interval);
+  }, [team]);
+
   const getEventStatus = (evt: Event) => {
       const now = new Date();
       const sDate = evt.start_date;
