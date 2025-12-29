@@ -126,4 +126,11 @@ public class TeamController {
         }
         return ResponseEntity.ok(sessions);
     }
+
+    @GetMapping("/my-teams")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
+    public ResponseEntity<List<TeamDto>> getMyTeams() {
+        User currentUser = getCurrentUser();
+        return ResponseEntity.ok(teamService.getTeamsForUser(currentUser.getId()));
+    }
 }
