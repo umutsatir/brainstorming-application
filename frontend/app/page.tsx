@@ -214,14 +214,29 @@ export default function Home() {
                   </div>
               </div>
               
-              <Button 
-                variant="outline" 
-                className="bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:text-red-600 hover:border-red-100 transition-all rounded-full px-6 shadow-sm"
-                onClick={handleLogout}
-              >
-                <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
-              </Button>
+              <div className="flex items-center gap-3">
+                  {(user?.role === "EVENT_MANAGER" || user?.role === "ROLE_EVENT_MANAGER" || 
+                    user?.role === "TEAM_LEADER" || user?.role === "ROLE_TEAM_LEADER") && (
+                      <Link href="/dashboard/teams">
+                          <Button 
+                            variant="outline" 
+                            className="bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:text-blue-600 hover:border-blue-100 transition-all rounded-full px-6 shadow-sm"
+                          >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            Dashboard
+                          </Button>
+                      </Link>
+                  )}
+                  
+                  <Button 
+                    variant="outline" 
+                    className="bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:text-red-600 hover:border-red-100 transition-all rounded-full px-6 shadow-sm"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </Button>
+              </div>
           </div>
 
           {/* Main Content */}
