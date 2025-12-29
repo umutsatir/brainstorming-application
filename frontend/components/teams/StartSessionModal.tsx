@@ -89,12 +89,8 @@ export function StartSessionModal({
       onClose();
     } catch (error: any) {
       console.error("Failed to start session", error);
-<<<<<<< Updated upstream
-      alert(`Failed to start session: ${error.response?.data?.message || error.message}`);
-=======
       const errorMessage = error.response?.data?.message || error.message || "Unknown error occurred";
       alert(`Failed to start session: ${errorMessage}`);
->>>>>>> Stashed changes
     } finally {
       setSubmitting(false);
     }
