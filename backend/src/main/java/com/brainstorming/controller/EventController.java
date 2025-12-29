@@ -37,7 +37,6 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<EventDto> getEventById(@PathVariable Long id) {
         return ResponseEntity.ok(eventService.getEventById(id));
     }
@@ -103,7 +102,8 @@ public class EventController {
 
     @PostMapping("/{eventId}/topics")
     @PreAuthorize("hasRole('EVENT_MANAGER')")
-    public ResponseEntity<TopicDto> createTopic(@PathVariable Long eventId, @Valid @RequestBody CreateTopicRequest request) {
+    public ResponseEntity<TopicDto> createTopic(@PathVariable Long eventId,
+            @Valid @RequestBody CreateTopicRequest request) {
         return ResponseEntity.status(201).body(topicService.createTopic(eventId, request));
     }
 
