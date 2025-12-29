@@ -46,7 +46,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                     }
 
                     // Team Leaders cannot access the main dashboard overview, only sub-pages like /events
-                    if ((role === "TEAM_LEADER" || role === "ROLE_TEAM_LEADER") && pathname === "/dashboard") {
+                    if ((role === "TEAM_LEADER" || role === "ROLE_TEAM_LEADER") && (pathname === "/dashboard" || pathname.startsWith("/dashboard/topics"))) {
                         router.push("/dashboard/events");
                         return;
                     }
