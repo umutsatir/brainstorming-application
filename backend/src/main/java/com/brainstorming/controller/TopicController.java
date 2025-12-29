@@ -16,6 +16,12 @@ public class TopicController {
 
     private final TopicService topicService;
 
+    @GetMapping
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<java.util.List<TopicDto>> getAllTopics() {
+        return ResponseEntity.ok(topicService.getAllTopics());
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TopicDto> getTopicById(@PathVariable Long id) {

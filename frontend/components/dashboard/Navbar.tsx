@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, Settings, Bell, Search, User } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, Settings, Bell, Search, User, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function Navbar() {
@@ -11,7 +11,7 @@ export function Navbar() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Events", href: "/dashboard/events", icon: Calendar },
-    { name: "Teams", href: "/dashboard/teams", icon: Users },
+    { name: "Topics", href: "/dashboard/topics", icon: MessageSquare },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

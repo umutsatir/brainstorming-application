@@ -14,6 +14,7 @@ public class TopicDto {
     private Long eventId;
     private String title;
     private String description;
+    private String authorName;
     private Topic.Status status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
