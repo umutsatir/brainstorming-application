@@ -132,9 +132,9 @@ export function TeamCard({
                     <Lock className="h-3 w-3" /> Full
                  </div>
              ) : (
-                 <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                    <Plus className="h-4 w-4 mr-1" /> Add
-                 </Button>
+                 <div className="text-xs text-green-600 font-medium">
+                    Open
+                 </div>
              )}
         </div>
     </div>

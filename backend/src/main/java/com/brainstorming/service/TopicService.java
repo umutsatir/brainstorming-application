@@ -46,6 +46,11 @@ public class TopicService {
         return topicMapper.toDtoList(topics);
     }
 
+    public List<TopicDto> getAllTopics() {
+        List<Topic> topics = topicRepository.findAll();
+        return topicMapper.toDtoList(topics);
+    }
+
     public TopicDto getTopicById(Long topicId) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new ResourceNotFoundException("Topic not found with id: " + topicId));

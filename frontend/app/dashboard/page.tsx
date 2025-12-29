@@ -51,9 +51,16 @@ export default function DashboardPage() {
         const ideas = ideasRes.data;
 
         // Handle potential pagination in users response
-        const totalParticipants = usersData.totalElements !== undefined 
-          ? usersData.totalElements 
-          : (Array.isArray(usersData) ? usersData.length : 0);
+        let totalParticipants = 0;
+        if (usersData?.totalElements !== undefined) {
+          totalParticipants = usersData.totalElements;
+        } else if (usersData?.page?.totalElements !== undefined) {
+          totalParticipants = usersData.page.totalElements;
+        } else if (Array.isArray(usersData)) {
+          totalParticipants = usersData.length;
+        } else if (usersData?.content && Array.isArray(usersData.content)) {
+          totalParticipants = usersData.content.length;
+        }
 
         // Process Stats
         const stats = {

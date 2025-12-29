@@ -11,6 +11,7 @@ import java.util.List;
 public interface TopicMapper {
     
     @Mapping(source = "event.id", target = "eventId")
+    @Mapping(source = "event.owner.fullName", target = "authorName")
     TopicDto toDto(Topic topic);
     
     List<TopicDto> toDtoList(List<Topic> topics);
