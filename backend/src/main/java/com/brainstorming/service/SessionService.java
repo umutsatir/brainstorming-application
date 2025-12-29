@@ -23,6 +23,7 @@ public class SessionService {
     private final RoundRepository roundRepository;
     private final IdeaRepository ideaRepository;
     private final TeamRepository teamRepository;
+    private final TopicRepository topicRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final UserRepository userRepository;
 
@@ -51,12 +52,15 @@ public class SessionService {
         Team team = teamRepository.findById(request.getTeamId())
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
 
+        Topic topic = topicRepository.findById(request.getTopicId())
+                .orElseThrow(() -> new ResourceNotFoundException("Topic not found"));
+
         Session session = Session.builder()
                 .team(team)
-                .topic(team.getSessions().isEmpty() ? null : null) // Topic handling if needed
+                .topic(topic)
                 .status(Session.Status.PENDING)
                 .currentRound(1)
-                .roundCount(request.getRoundCount() != null ? request.getRoundCount() : 6)
+                .roundCount(request.getRoundCount() != null ? request.getRoundCount() : 5)
                 .build();
 
         Session saved = sessionRepository.save(session);
@@ -68,7 +72,7 @@ public class SessionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found"));
 
         Team team = session.getTeam();
-        
+
         // Check if user is team leader
         if (team.getLeader().getId().equals(userId)) {
             return;
@@ -125,7 +129,7 @@ public class SessionService {
 
         // Calculate timer remaining
         int timerRemaining = ROUND_DURATION_SECONDS;
-        if (currentRound != null && currentRound.getStartTime() != null 
+        if (currentRound != null && currentRound.getStartTime() != null
                 && currentRound.getTimerState() == Round.TimerState.RUNNING) {
             long elapsed = ChronoUnit.SECONDS.between(currentRound.getStartTime(), LocalDateTime.now());
             timerRemaining = Math.max(0, ROUND_DURATION_SECONDS - (int) elapsed);
@@ -169,11 +173,11 @@ public class SessionService {
 
         // Determine if user can submit
         boolean hasSubmitted = myIdeas.size() >= 3;
-        boolean isRoundLocked = currentRound == null || 
-                currentRound.getTimerState() == Round.TimerState.FINISHED || 
+        boolean isRoundLocked = currentRound == null ||
+                currentRound.getTimerState() == Round.TimerState.FINISHED ||
                 session.getStatus() == Session.Status.COMPLETED;
-        boolean canSubmit = (userRole.equals("member") || userRole.equals("leader")) 
-                && !hasSubmitted && !isRoundLocked 
+        boolean canSubmit = (userRole.equals("member") || userRole.equals("leader"))
+                && !hasSubmitted && !isRoundLocked
                 && session.getStatus() == Session.Status.RUNNING;
 
         return SessionStateDto.builder()
@@ -301,7 +305,8 @@ public class SessionService {
             case "end":
                 return completeSession(sessionId, userId);
             default:
-                throw new BadRequestException("Invalid action: " + action + ". Valid actions are: start, pause, resume, end");
+                throw new BadRequestException(
+                        "Invalid action: " + action + ". Valid actions are: start, pause, resume, end");
         }
     }
 
@@ -358,10 +363,10 @@ public class SessionService {
 
     private List<User> getOrderedParticipants(Team team) {
         List<User> participants = new ArrayList<>();
-        
+
         // Add leader first (sort order 0)
         participants.add(team.getLeader());
-        
+
         // Add team members ordered by id
         List<TeamMember> members = teamMemberRepository.findByTeamId(team.getId());
         members.stream()
@@ -373,7 +378,8 @@ public class SessionService {
         return participants;
     }
 
-    private List<TeamMemberSubmissionDto> getTeamSubmissions(Session session, Round currentRound, List<User> participants) {
+    private List<TeamMemberSubmissionDto> getTeamSubmissions(Session session, Round currentRound,
+            List<User> participants) {
         List<TeamMemberSubmissionDto> submissions = new ArrayList<>();
 
         for (User participant : participants) {
@@ -423,7 +429,8 @@ public class SessionService {
         List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
         int totalParticipants = 1 + members.size(); // leader + members
         if (totalParticipants != 6) {
-            throw new BadRequestException("Team must have exactly 6 participants (currently has " + totalParticipants + ")");
+            throw new BadRequestException(
+                    "Team must have exactly 6 participants (currently has " + totalParticipants + ")");
         }
 
         Session session = Session.builder()
@@ -468,7 +475,7 @@ public class SessionService {
         }
 
         Integer currentRoundNum = session.getCurrentRound();
-        
+
         // Lock current round
         Round currentRound = roundRepository.findBySessionIdAndRoundNumber(sessionId, currentRoundNum)
                 .orElseThrow(() -> new ResourceNotFoundException("Current round not found"));
@@ -479,20 +486,20 @@ public class SessionService {
         // Build idea passing map
         List<User> participants = getOrderedParticipants(team);
         Map<Long, List<IdeaDto>> passedIdeaMap = new HashMap<>();
-        
+
         for (int i = 0; i < participants.size(); i++) {
             User currentParticipant = participants.get(i);
             // Previous participant in circular rotation
             int prevIndex = i > 0 ? i - 1 : participants.size() - 1;
             User prevParticipant = participants.get(prevIndex);
-            
+
             // Get ideas from previous participant in current round
             List<IdeaDto> passedIdeas = ideaRepository.findBySessionIdAndRoundId(sessionId, currentRound.getId())
                     .stream()
                     .filter(idea -> idea.getAuthor().getId().equals(prevParticipant.getId()))
                     .map(this::mapToIdeaDto)
                     .collect(Collectors.toList());
-            
+
             passedIdeaMap.put(currentParticipant.getId(), passedIdeas);
         }
 
@@ -500,7 +507,7 @@ public class SessionService {
         if (currentRoundNum >= session.getRoundCount()) {
             session.setStatus(Session.Status.COMPLETED);
             sessionRepository.save(session);
-            
+
             return AdvanceRoundResponseDto.builder()
                     .currentRound(currentRoundNum)
                     .previousRoundStatus("COMPLETED")
@@ -543,7 +550,7 @@ public class SessionService {
 
         Team team = session.getTeam();
         List<User> participants = getOrderedParticipants(team);
-        
+
         List<RoundDetailDto.MemberSubmissionStatusDto> memberSubmissions = new ArrayList<>();
         int submittedCount = 0;
 
@@ -552,10 +559,11 @@ public class SessionService {
                     .stream()
                     .filter(idea -> idea.getAuthor().getId().equals(participant.getId()))
                     .collect(Collectors.toList());
-            
+
             boolean hasSubmitted = ideas.size() >= 3;
-            if (hasSubmitted) submittedCount++;
-            
+            if (hasSubmitted)
+                submittedCount++;
+
             LocalDateTime submittedAt = ideas.stream()
                     .map(Idea::getCreatedAt)
                     .max(LocalDateTime::compareTo)

@@ -34,7 +34,6 @@ public class AiArtifact {
     @Column(nullable = false)
     private Type type;
 
-    @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "json")
     private String content;
 
