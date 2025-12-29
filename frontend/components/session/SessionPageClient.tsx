@@ -387,12 +387,20 @@ export function SessionPageClient({
                     <p className="text-zinc-400 mb-6">
                         Great work! The brainstorming session has ended.
                     </p>
-                    <button
-                        onClick={() => router.push("/dashboard")}
-                        className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
-                    >
-                        Go to Dashboard
-                    </button>
+                    <div className="flex flex-col gap-3">
+                        <button
+                            onClick={() => router.push(`/sessions/${sessionId}/summary`)}
+                            className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                            View Session Summary
+                        </button>
+                        <button
+                            onClick={() => router.push("/dashboard")}
+                            className="px-6 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                            Go to Dashboard
+                        </button>
+                    </div>
                 </div>
             </div>
         );
