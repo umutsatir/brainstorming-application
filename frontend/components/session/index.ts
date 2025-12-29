@@ -6,3 +6,4 @@ export { TeamSubmissionStatus } from "./TeamSubmissionStatus";
 export { ConnectionStatus } from "./ConnectionStatus";
 export { SessionPageClient } from "./SessionPageClient";
 export { SessionControlPanel } from "./SessionControlPanel";
+export { SessionSummaryClient } from "./SessionSummaryClient";
