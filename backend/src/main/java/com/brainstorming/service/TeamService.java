@@ -101,7 +101,7 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
         Long leaderId = team.getLeader().getId();
-        
+
         List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
         return members.stream()
                 .map(member -> {
@@ -166,5 +166,13 @@ public class TeamService {
         Team savedTeam = teamRepository.save(team);
 
         return teamMapper.toDto(savedTeam);
+    }
+
+    public List<TeamDto> getTeamsForUser(Long userId) {
+        List<TeamMember> memberships = teamMemberRepository.findByUserId(userId);
+        return memberships.stream()
+                .map(TeamMember::getTeam)
+                .map(teamMapper::toDto)
+                .collect(Collectors.toList());
     }
 }
