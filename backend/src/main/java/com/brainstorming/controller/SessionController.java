@@ -75,6 +75,10 @@ public class SessionController {
     
     @PostMapping
     public ResponseEntity<SessionDto> createSession(@RequestBody CreateSessionRequest request) {
+        System.out.println("DEBUG CONTROLLER: Received CreateSessionRequest");
+        System.out.println("DEBUG CONTROLLER: teamId=" + request.getTeamId());
+        System.out.println("DEBUG CONTROLLER: topicId=" + request.getTopicId());
+        System.out.println("DEBUG CONTROLLER: roundCount=" + request.getRoundCount());
         SessionDto session = sessionService.createSession(request);
         return ResponseEntity.ok(session);
     }
