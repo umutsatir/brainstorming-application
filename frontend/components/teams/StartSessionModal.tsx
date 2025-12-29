@@ -35,6 +35,12 @@ export function StartSessionModal({
   useEffect(() => {
     if (isOpen && eventId) {
       fetchTopics();
+    } else if (!isOpen) {
+      // Reset form state when modal closes
+      setSelectedTopicId("");
+      setRoundCount("6");
+      setLoading(false);
+      setSubmitting(false);
     }
   }, [isOpen, eventId]);
 
@@ -55,20 +61,35 @@ export function StartSessionModal({
   };
 
   const handleStart = async () => {
-    if (!teamId || !selectedTopicId) return;
+    if (!teamId || !selectedTopicId) {
+      console.error("Cannot start session: teamId or topicId is missing", { teamId, selectedTopicId });
+      alert("Error: Team ID or Topic ID is missing. Please close the modal and try again.");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const response = await api.post("/sessions", {
-        teamId: teamId,
-        topicId: parseInt(selectedTopicId),
-        roundCount: parseInt(roundCount)
-      });
-      
-      onSessionStarted(response.data.id);
+      // Step 1: Create the session
+      // IMPORTANT: Backend expects snake_case due to Jackson configuration
+      const requestBody = {
+        team_id: teamId,
+        topic_id: parseInt(selectedTopicId),
+        round_count: parseInt(roundCount)
+      };
+
+      const response = await api.post("/sessions", requestBody);
+
+      const sessionId = response.data.id;
+
+      // Step 2: Start the session immediately
+      await api.post(`/sessions/${sessionId}/start`);
+
+      // Step 3: Navigate to session page
+      onSessionStarted(sessionId);
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to start session", error);
+      alert(`Failed to start session: ${error.response?.data?.message || error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -165,9 +186,9 @@ export function StartSessionModal({
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button 
-            onClick={handleStart} 
-            disabled={submitting || loading || topics.length === 0 || !selectedTopicId}
+          <Button
+            onClick={handleStart}
+            disabled={submitting || loading || topics.length === 0 || !selectedTopicId || !teamId}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {submitting ? (
