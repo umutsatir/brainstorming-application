@@ -15,6 +15,7 @@ import {
     MemberSubmittedPayload,
 } from "@/types/session";
 import { useSessionWebSocket } from "@/hooks/useSessionWebSocket";
+import { API_BASE_URL } from "@/lib/config";
 import {
     TimerDisplay,
     SessionHeader,
@@ -55,9 +56,22 @@ export function SessionPageClient({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
+    const [isWaitingForNextRound, setIsWaitingForNextRound] = useState(false);
 
-    // Backend API base URL
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+    // Log when all team members submit (backend will auto-advance the round)
+    useEffect(() => {
+        var isAllSubmitted = true;
+        teamSubmissions.forEach(submission => {
+            if (!submission.submitted) {
+                isAllSubmitted = false;
+                return;
+            }
+        });
+        if (isAllSubmitted && teamSubmissions.length > 0 && session?.status === SessionStatus.RUNNING) {
+            console.log('All team members submitted - backend will auto-advance round');
+            // Don't fetch state here - the backend will send round_end then round_start events
+        }
+    }, [teamSubmissions, session?.status]);
 
     // Fetch initial state
     const fetchSessionState = useCallback(async () => {
@@ -78,6 +92,7 @@ export function SessionPageClient({
 
             const data = await response.json();
             handleSessionState(data);
+            console.log("Fetched session state:", data);
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -100,58 +115,49 @@ export function SessionPageClient({
     // Handle timer tick
     const handleTimerTick = useCallback((payload: TimerTickPayload) => {
         setTimerRemaining(payload.remaining_seconds);
+        if (payload.remaining_seconds === 0) {
+            console.log('Timer reached 0, state:', payload.timer_state);
+        }
         if (payload.timer_state === TimerState.FINISHED) {
+            console.log('Timer FINISHED state received');
             setIsRoundLocked(true);
             setCanSubmit(false);
         }
     }, []);
 
-    // Handle round start
+    // Handle round start - not used anymore, backend sends refresh_state instead
     const handleRoundStart = useCallback((payload: RoundStartPayload) => {
-        setCurrentRound(payload.round);
-        setPreviousIdeas(payload.previous_ideas);
-        setTimerRemaining(payload.timer_remaining_seconds);
-        setMyIdeas([]);
-        setIsRoundLocked(false);
-        setSubmitError(null);
+        console.log('Round start event received (unused):', payload);
+    }, []);
 
-        // Update session current round
-        setSession((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      current_round: payload.round.round_number,
-                  }
-                : null
-        );
-
-        // Reset submissions - mark everyone as pending
-        setTeamSubmissions((prev) =>
-            prev.map((s) => ({ ...s, submitted: false, submitted_at: null }))
-        );
-
-        // Team members and leaders can submit again
-        if (userRole === "member" || userRole === "leader") {
-            setCanSubmit(true);
-        }
-    }, [userRole]);
-
-    // Handle round end
+    // Handle round end - not used anymore, backend sends refresh_state instead
     const handleRoundEnd = useCallback(() => {
-        setIsRoundLocked(true);
-        setCanSubmit(false);
+        console.log('Round end event received');
     }, []);
 
     // Handle member submitted
-    const handleMemberSubmitted = useCallback((payload: MemberSubmittedPayload) => {
-        setTeamSubmissions((prev) =>
-            prev.map((s) =>
-                s.user_id === payload.user_id
-                    ? { ...s, submitted: true, submitted_at: new Date().toISOString() }
-                    : s
-            )
-        );
-    }, []);
+    const handleMemberSubmitted = useCallback((payload: any) => {
+        // Check if this is a confirmation response (has 'ideas' field) or broadcast (has 'user_id')
+        if (payload.ideas) {
+            // This is the submitter's confirmation - update their ideas
+            setMyIdeas(payload.ideas);
+            setCanSubmit(false);
+        } else if (payload.user_id !== undefined) {
+            // This is a broadcast notification about someone's submission
+            setTeamSubmissions((prev) =>
+                prev.map((s) =>
+                    s.user_id === payload.user_id
+                        ? { ...s, submitted: true, submitted_at: new Date().toISOString() }
+                        : s
+                )
+            );
+
+            // If this is the current user's submission, disable further submissions
+            if (payload.user_id === currentUserId) {
+                setCanSubmit(false);
+            }
+        }
+    }, [currentUserId]);
 
     // Handle session paused
     const handleSessionPaused = useCallback(() => {
@@ -181,6 +187,13 @@ export function SessionPageClient({
         setIsRoundLocked(true);
     }, []);
 
+    // Handle refresh state signal from backend
+    const handleRefreshState = useCallback(() => {
+        console.log('Backend signaled to refresh state');
+        setIsWaitingForNextRound(false);
+        fetchSessionState();
+    }, [fetchSessionState]);
+
     // Handle WebSocket error
     const handleWsError = useCallback((errorMsg: string) => {
         console.error("WebSocket error:", errorMsg);
@@ -203,6 +216,7 @@ export function SessionPageClient({
         onSessionPaused: handleSessionPaused,
         onSessionResumed: handleSessionResumed,
         onSessionCompleted: handleSessionCompleted,
+        onRefreshState: handleRefreshState,
         onError: handleWsError,
     });
 
@@ -210,6 +224,19 @@ export function SessionPageClient({
     useEffect(() => {
         fetchSessionState();
     }, [fetchSessionState]);
+
+    useEffect(() => {
+        let isAllSubmitted = true;
+        teamSubmissions.forEach(submission => {
+            if (!submission.submitted) {
+                isAllSubmitted = false;
+                return;
+            }
+        });
+        if (isAllSubmitted && teamSubmissions.length > 0 && session?.status === SessionStatus.RUNNING) {
+            fetchSessionState();
+        }
+    }, [teamSubmissions]);
 
     // Submit ideas handler
     const handleSubmitIdeas = useCallback(
@@ -220,50 +247,22 @@ export function SessionPageClient({
                 setIsSubmitting(true);
                 setSubmitError(null);
 
-                const response = await fetch(
-                    `${API_BASE_URL}/sessions/${sessionId}/rounds/${currentRound.round_number}/ideas`,
-                    {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({ ideas }),
-                    }
-                );
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || "Failed to submit ideas");
-                }
-
-                // Update local state
-                setMyIdeas(data.ideas);
-                setCanSubmit(false);
-
-                // Also send via WebSocket for real-time update to others
+                // Send via WebSocket - backend will handle submission and broadcast
                 wsSubmitIdeas({
                     session_id: sessionId,
                     round_number: currentRound.round_number,
                     ideas,
                 });
 
-                // Update own submission status
-                setTeamSubmissions((prev) =>
-                    prev.map((s) =>
-                        s.user_id === currentUserId
-                            ? { ...s, submitted: true, submitted_at: new Date().toISOString() }
-                            : s
-                    )
-                );
+                // Don't update local state here - wait for WebSocket broadcast confirmation
+                // The handleMemberSubmitted callback will update the UI for everyone including sender
             } catch (err: any) {
                 setSubmitError(err.message);
             } finally {
                 setIsSubmitting(false);
             }
         },
-        [session, currentRound, sessionId, token, wsSubmitIdeas, currentUserId]
+        [session, currentRound, sessionId, wsSubmitIdeas]
     );
 
     // Handle session status change from control panel
@@ -452,13 +451,41 @@ export function SessionPageClient({
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
                     {/* Main content - 2 columns */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Timer */}
+                        {/* Timer or Waiting for Next Round */}
                         <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8">
-                            <TimerDisplay
-                                remainingSeconds={timerRemaining}
-                                timerState={timerState}
-                                isConnected={isConnected}
-                            />
+                            {isWaitingForNextRound ? (
+                                <div className="text-center">
+                                    <div className="flex items-center justify-center gap-3 mb-2">
+                                        <svg
+                                            className="animate-spin h-8 w-8 text-emerald-400"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <circle
+                                                className="opacity-25"
+                                                cx="12"
+                                                cy="12"
+                                                r="10"
+                                                stroke="currentColor"
+                                                strokeWidth="4"
+                                            />
+                                            <path
+                                                className="opacity-75"
+                                                fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                                            />
+                                        </svg>
+                                        <h3 className="text-2xl font-bold text-emerald-400">Preparing Next Round...</h3>
+                                    </div>
+                                    <p className="text-zinc-400">Please wait while we set up the next round</p>
+                                </div>
+                            ) : (
+                                <TimerDisplay
+                                    remainingSeconds={timerRemaining}
+                                    timerState={timerState}
+                                    isConnected={isConnected}
+                                />
+                            )}
                         </div>
 
                         {/* Previous ideas */}

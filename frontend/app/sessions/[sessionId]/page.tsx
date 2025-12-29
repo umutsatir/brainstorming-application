@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SessionPageClient } from "@/components/session/SessionPageClient";
+import { API_BASE_URL } from "@/lib/config";
 
 export default function SessionPage() {
     const params = useParams();
@@ -44,7 +45,6 @@ export default function SessionPage() {
 
     const fetchSessionState = async (token: string, userId: number) => {
         try {
-            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
             const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/state`, {
                 headers: {
                     Authorization: `Bearer ${token}`,

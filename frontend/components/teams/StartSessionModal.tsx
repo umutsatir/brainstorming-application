@@ -77,6 +77,11 @@ export function StartSessionModal({
         round_count: parseInt(roundCount)
       };
 
+      console.log("=== FRONTEND DEBUG ===");
+      console.log("Request Body:", requestBody);
+      console.log("JSON Stringified:", JSON.stringify(requestBody));
+      console.log("======================");
+
       const response = await api.post("/sessions", requestBody);
 
       const sessionId = response.data.id;
