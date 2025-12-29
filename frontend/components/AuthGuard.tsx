@@ -38,8 +38,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
                 try {
                     const user = JSON.parse(userStr);
                     const role = user.role;
+                    
+                    // Team Members cannot access any dashboard
                     if (role === "TEAM_MEMBER" || role === "ROLE_TEAM_MEMBER") {
-                        router.push("/"); // Redirect to home/landing
+                        router.push("/"); 
+                        return;
+                    }
+
+                    // Team Leaders cannot access the main dashboard overview, only sub-pages like /events
+                    if ((role === "TEAM_LEADER" || role === "ROLE_TEAM_LEADER") && pathname === "/dashboard") {
+                        router.push("/dashboard/events");
                         return;
                     }
                 } catch (e) {

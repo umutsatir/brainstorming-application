@@ -45,7 +45,7 @@ public class EventService {
 
         // If TEAM_LEADER, find teams they lead and return unique events
         if (user.getRole() == User.Role.TEAM_LEADER) {
-            List<Team> teams = teamRepository.findByLeaderId(user.getId());
+            List<Team> teams = teamRepository.findAllByMembers_UserId(user.getId());
             return teams.stream()
                     .map(Team::getEvent)
                     .distinct() // Ensure unique events
