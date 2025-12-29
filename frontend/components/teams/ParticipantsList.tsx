@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { GripHorizontal, Search, Loader2, Trash2, MoreVertical, Crown, Plus, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,26 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
   const [searchQuery, setSearchQuery] = useState("");
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [addingUserId, setAddingUserId] = useState<number | null>(null);
+  
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: "danger" | "primary" | "warning";
+    confirmText: string;
+    onConfirm: () => Promise<void>;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    variant: "primary",
+    confirmText: "Confirm",
+    onConfirm: async () => {},
+  });
+
+  const closeConfirmModal = () => {
+    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+  };
 
   const fetchParticipants = async () => {
     if (!teamId) {
@@ -82,31 +103,47 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
       e?.stopPropagation();
       if (!teamId) return;
 
-      if (!confirm("Are you sure you want to remove this member from the team?")) return;
-
-      try {
-          await api.delete(`/teams/${teamId}/members/${userId}`);
-          fetchParticipants();
-          onTeamUpdated?.();
-      } catch (error) {
-          console.error("Failed to remove member", error);
-          alert("Failed to remove member");
-      }
+      setConfirmModal({
+        isOpen: true,
+        title: "Remove Member",
+        message: "Are you sure you want to remove this member from the team?",
+        variant: "danger",
+        confirmText: "Remove",
+        onConfirm: async () => {
+            try {
+                await api.delete(`/teams/${teamId}/members/${userId}`);
+                fetchParticipants();
+                onTeamUpdated?.();
+                closeConfirmModal();
+            } catch (error) {
+                console.error("Failed to remove member", error);
+                alert("Failed to remove member");
+            }
+        }
+      });
   };
 
   const handlePromoteToLeader = async (userId: number) => {
       if (!teamId) return;
 
-      if (!confirm("Are you sure you want to promote this member to Team Leader? The current leader will become a regular team member.")) return;
-
-      try {
-          await api.put(`/teams/${teamId}/leader/${userId}`);
-          fetchParticipants();
-          onTeamUpdated?.();
-      } catch (error) {
-          console.error("Failed to promote member", error);
-          alert("Failed to promote member to Team Leader");
-      }
+      setConfirmModal({
+        isOpen: true,
+        title: "Promote to Leader",
+        message: "Are you sure you want to promote this member to Team Leader? The current leader will become a regular team member.",
+        variant: "warning",
+        confirmText: "Promote",
+        onConfirm: async () => {
+            try {
+                await api.put(`/teams/${teamId}/leader/${userId}`);
+                fetchParticipants();
+                onTeamUpdated?.();
+                closeConfirmModal();
+            } catch (error) {
+                console.error("Failed to promote member", error);
+                alert("Failed to promote member to Team Leader");
+            }
+        }
+      });
   };
 
   const handleAddMember = async (userId: number) => {
@@ -368,6 +405,16 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
                 </div>
             )}
         </div>
+        
+        <ConfirmationModal
+            isOpen={confirmModal.isOpen}
+            onClose={closeConfirmModal}
+            onConfirm={confirmModal.onConfirm}
+            title={confirmModal.title}
+            message={confirmModal.message}
+            variant={confirmModal.variant}
+            confirmText={confirmModal.confirmText}
+        />
      </div>
   );
 }

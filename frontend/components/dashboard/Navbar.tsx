@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, Bell, Search, User, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Calendar, Users, Bell, Search, User, MessageSquare, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -23,6 +23,7 @@ export function Navbar() {
   }, []);
 
   const navigation = [
+    { name: "Home", href: "/", icon: Home },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Events", href: "/dashboard/events", icon: Calendar },
   ];
@@ -45,7 +46,10 @@ export function Navbar() {
 
       <nav className="hidden md:flex items-center gap-1">
         {filteredNavigation.map((item) => {
-          const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+          const isActive = item.href === '/' 
+            ? pathname === '/' 
+            : pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+          
           return (
             <Link
               key={item.name}
