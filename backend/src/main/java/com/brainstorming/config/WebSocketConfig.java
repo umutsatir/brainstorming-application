@@ -20,6 +20,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(sessionWebSocketHandler, "/ws/sessions/{sessionId}")
-                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001");
+                .setAllowedOriginPatterns("*");
     }
 }
