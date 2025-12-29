@@ -1,16 +1,14 @@
 package com.brainstorming.dto;
 
-import jakarta.validation.constraints.NotBlank;
+import com.brainstorming.entity.Topic;
 import lombok.*;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CreateTopicRequest {
-    
-    @NotBlank(message = "Topic title is required")
+public class UpdateTopicRequest {
     private String title;
-    
     private String description;
+    private Topic.Status status;
 }

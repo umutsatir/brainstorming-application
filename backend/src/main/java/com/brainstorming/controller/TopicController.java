@@ -1,44 +1,37 @@
 package com.brainstorming.controller;
 
-import com.brainstorming.dto.*;
+import com.brainstorming.dto.TopicDto;
+import com.brainstorming.dto.UpdateTopicRequest;
+import com.brainstorming.service.TopicService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/topics")
+@RequiredArgsConstructor
 public class TopicController {
 
-    // TODO: Inject TopicService
-    
-    @GetMapping
-    public ResponseEntity<List<TopicDto>> getAllTopics() {
-        // TODO: Implement get all topics
-        return ResponseEntity.ok().build();
-    }
-    
+    private final TopicService topicService;
+
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<TopicDto> getTopicById(@PathVariable Long id) {
-        // TODO: Implement get topic by id
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(topicService.getTopicById(id));
     }
-    
-    @PostMapping
-    public ResponseEntity<TopicDto> createTopic(@RequestBody CreateTopicRequest request) {
-        // TODO: Implement create topic
-        return ResponseEntity.ok().build();
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<TopicDto> updateTopic(@PathVariable Long id, @Valid @RequestBody UpdateTopicRequest request) {
+        return ResponseEntity.ok(topicService.updateTopic(id, request));
     }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<TopicDto> updateTopic(@PathVariable Long id, @RequestBody CreateTopicRequest request) {
-        // TODO: Implement update topic
-        return ResponseEntity.ok().build();
-    }
-    
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<Void> deleteTopic(@PathVariable Long id) {
-        // TODO: Implement delete topic
+        topicService.deleteTopic(id);
         return ResponseEntity.noContent().build();
     }
 }
