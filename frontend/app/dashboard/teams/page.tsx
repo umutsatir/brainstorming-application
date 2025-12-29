@@ -178,6 +178,8 @@ export default function TeamsPage() {
                     <div className="lg:col-span-4 xl:col-span-3 flex flex-col gap-4">
                          <ParticipantsList 
                              teamId={selectedTeamId} 
+                             teamName={teams.find(t => t.id === selectedTeamId)?.name}
+                             capacity={teams.find(t => t.id === selectedTeamId)?.capacity}
                              userRole={userRole}
                              onTeamUpdated={fetchTeams}
                          />
