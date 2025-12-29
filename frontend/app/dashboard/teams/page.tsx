@@ -125,6 +125,10 @@ export default function TeamsPage() {
   };
 
   const handleStartSession = (teamId: number) => {
+      if (!teamId) {
+        console.error("handleStartSession called with null/undefined teamId");
+        return;
+      }
       setSessionTeamId(teamId);
       setStartSessionModalOpen(true);
   };

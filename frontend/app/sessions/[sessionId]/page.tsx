@@ -1,94 +1,101 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { verifyToken } from "@/lib/jwt";
-import db from "@/lib/db";
+"use client";
+
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SessionPageClient } from "@/components/session/SessionPageClient";
 
-interface SessionPageProps {
-    params: Promise<{ sessionId: string }>;
-}
+export default function SessionPage() {
+    const params = useParams();
+    const router = useRouter();
+    const sessionId = parseInt(params.sessionId as string, 10);
 
-export default async function SessionPage({ params }: SessionPageProps) {
-    const { sessionId } = await params;
-    const sessionIdNum = parseInt(sessionId, 10);
+    const [isLoading, setIsLoading] = useState(true);
+    const [token, setToken] = useState<string | null>(null);
+    const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [userRole, setUserRole] = useState<"member" | "leader" | "manager" | null>(null);
 
-    if (isNaN(sessionIdNum)) {
-        redirect("/");
+    useEffect(() => {
+        // Check authentication
+        const storedToken = localStorage.getItem("token");
+        if (!storedToken) {
+            router.push("/login");
+            return;
+        }
+
+        // Get user info from localStorage
+        const userStr = localStorage.getItem("user");
+        if (!userStr) {
+            router.push("/login");
+            return;
+        }
+
+        try {
+            const user = JSON.parse(userStr);
+            setToken(storedToken);
+            setCurrentUserId(user.id);
+
+            // Fetch session state to determine user role
+            fetchSessionState(storedToken, user.id);
+        } catch (error) {
+            console.error("Failed to parse user data", error);
+            router.push("/login");
+        }
+    }, [sessionId, router]);
+
+    const fetchSessionState = async (token: string, userId: number) => {
+        try {
+            const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
+            const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/state`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (response.status === 401 || response.status === 403) {
+                // Unauthorized or forbidden - redirect to dashboard
+                router.push("/dashboard");
+                return;
+            }
+
+            if (!response.ok) {
+                console.error("Failed to fetch session state");
+                router.push("/dashboard");
+                return;
+            }
+
+            const data = await response.json();
+
+            // Determine user role from session state
+            setUserRole(data.user_role || "member");
+            setIsLoading(false);
+        } catch (error) {
+            console.error("Error fetching session state", error);
+            router.push("/dashboard");
+        }
+    };
+
+    if (isNaN(sessionId)) {
+        router.push("/");
+        return null;
     }
 
-    // Get auth token from cookies or headers
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value;
-
-    if (!token) {
-        redirect("/login");
-    }
-
-    // Verify token
-    let payload;
-    try {
-        payload = verifyToken(token);
-    } catch {
-        redirect("/login");
-    }
-
-    const currentUserId = payload.userId;
-
-    // Get session and check access
-    const [sessions] = (await db.execute(
-        `SELECT s.id, s.team_id, s.status
-        FROM sessions s
-        WHERE s.id = ?`,
-        [sessionIdNum]
-    )) as [any[], any];
-
-    if (sessions.length === 0) {
-        redirect("/");
-    }
-
-    const session = sessions[0];
-
-    // Check team membership and determine role
-    // Priority: leader > manager > member (leader can also submit ideas)
-    const [leaderCheck] = (await db.execute(
-        `SELECT 'leader' as role FROM teams WHERE id = ? AND leader_id = ?`,
-        [session.team_id, currentUserId]
-    )) as [any[], any];
-
-    const [managerCheck] = (await db.execute(
-        `SELECT 'manager' as role FROM events e 
-        JOIN teams t ON e.id = t.event_id 
-        WHERE t.id = ? AND e.owner_id = ?`,
-        [session.team_id, currentUserId]
-    )) as [any[], any];
-
-    const [memberCheck] = (await db.execute(
-        `SELECT 'member' as role FROM team_members WHERE team_id = ? AND user_id = ?`,
-        [session.team_id, currentUserId]
-    )) as [any[], any];
-
-    let userRole: "member" | "leader" | "manager";
-
-    // Leader takes priority (can submit ideas + control session)
-    if (leaderCheck.length > 0) {
-        userRole = "leader";
-    } else if (managerCheck.length > 0) {
-        userRole = "manager";
-    } else if (memberCheck.length > 0) {
-        userRole = "member";
-    } else {
-        // User doesn't have access
-        redirect("/");
+    if (isLoading || !token || !currentUserId || !userRole) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Loading session...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
         <SessionPageClient
-            sessionId={sessionIdNum}
+            sessionId={sessionId}
             token={token}
             currentUserId={currentUserId}
             userRole={userRole}
         />
     );
 }
-
-export const dynamic = "force-dynamic";
