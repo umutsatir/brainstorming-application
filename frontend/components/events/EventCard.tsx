@@ -78,14 +78,16 @@ export function EventCard({ event, onDelete, onEdit, canManage }: EventCardProps
 
       <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between gap-2">
         <div className="flex gap-2 w-full">
-             <Button 
-                variant="secondary"
-                size="sm"
-                className="flex-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm"
-                onClick={handleTopicsClick}
-            >
-                <MessageSquare className="mr-2 h-3.5 w-3.5" /> Topics
-            </Button>
+            {canManage && (
+                <Button 
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 shadow-sm"
+                    onClick={handleTopicsClick}
+                >
+                    <MessageSquare className="mr-2 h-3.5 w-3.5" /> Topics
+                </Button>
+            )}
             <Button 
                 variant="secondary"
                 size="sm"

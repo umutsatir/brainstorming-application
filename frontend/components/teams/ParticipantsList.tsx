@@ -132,6 +132,7 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
       }
   };
 
+  const isAuthorized = userRole === "EVENT_MANAGER" || userRole === "ROLE_EVENT_MANAGER" || userRole === "TEAM_LEADER" || userRole === "ROLE_TEAM_LEADER";
   const isEventManager = userRole === "EVENT_MANAGER" || userRole === "ROLE_EVENT_MANAGER";
   const isTeamFull = participants.length >= capacity;
 
@@ -182,7 +183,7 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
                 )}
             </div>
 
-            {teamId && isEventManager && (
+            {teamId && isAuthorized && (
                 <div className="flex w-full border-b border-gray-100">
                     <button
                         className={`flex-1 pb-2 text-sm font-medium transition-all relative ${
