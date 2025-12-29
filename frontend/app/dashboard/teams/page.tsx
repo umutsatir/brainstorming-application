@@ -9,6 +9,7 @@ import { ParticipantsList } from "@/components/teams/ParticipantsList";
 import { TeamCard } from "@/components/teams/TeamCard";
 import { CreateTeamModal } from "@/components/teams/CreateTeamModal";
 import { DeleteConfirmationModal } from "@/components/teams/DeleteConfirmationModal";
+import { StartSessionModal } from "@/components/teams/StartSessionModal";
 
 interface Team {
   id: number;
@@ -35,6 +36,10 @@ export default function TeamsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<number | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Session Start Modal State
+  const [startSessionModalOpen, setStartSessionModalOpen] = useState(false);
+  const [sessionTeamId, setSessionTeamId] = useState<number | null>(null);
 
   const fetchTeams = async () => {
     if (!eventId) return;
@@ -119,6 +124,15 @@ export default function TeamsPage() {
       }
   };
 
+  const handleStartSession = (teamId: number) => {
+      setSessionTeamId(teamId);
+      setStartSessionModalOpen(true);
+  };
+
+  const handleSessionStarted = (sessionId: number) => {
+      router.push(`/sessions/${sessionId}`);
+  };
+
   return (
     <div className="flex flex-col gap-6">
         {/* Breadcrumb / Header */}
@@ -193,6 +207,7 @@ export default function TeamsPage() {
                                         onClick={() => handleTeamClick(team.id)}
                                         onDelete={() => confirmDelete(team.id)}
                                         onEdit={() => handleEditClick(team)}
+                                        onStartSession={handleStartSession}
                                         canDelete={canDelete}
                                     />
                                 ))}
@@ -227,6 +242,14 @@ export default function TeamsPage() {
             onClose={() => setDeleteModalOpen(false)}
             onConfirm={handleDeleteTeam}
             loading={deleteLoading}
+        />
+
+        <StartSessionModal
+            isOpen={startSessionModalOpen}
+            onClose={() => setStartSessionModalOpen(false)}
+            eventId={eventId || ""}
+            teamId={sessionTeamId}
+            onSessionStarted={handleSessionStarted}
         />
     </div>
   );

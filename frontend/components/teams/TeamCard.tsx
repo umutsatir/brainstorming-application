@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MoreHorizontal, Plus, Lock, Trash2, Pencil } from "lucide-react";
+import { MoreHorizontal, Plus, Lock, Trash2, Pencil, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TeamProps {
@@ -17,6 +17,7 @@ export function TeamCard({
     onClick,
     onDelete,
     onEdit,
+    onStartSession,
     canDelete = false
 }: { 
     team: TeamProps;
@@ -24,6 +25,7 @@ export function TeamCard({
     onClick: () => void;
     onDelete: () => void;
     onEdit: (team: TeamProps) => void;
+    onStartSession?: (teamId: number) => void;
     canDelete?: boolean;
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -31,6 +33,7 @@ export function TeamCard({
   const isFull = team.member_count >= capacity;
   const status = isFull ? "Full" : "Open";
   const progress = (team.member_count / capacity) * 100;
+  const canStartSession = team.member_count >= 2;
   
   return (
     <div 
@@ -127,15 +130,21 @@ export function TeamCard({
                 )}
              </div>
              
-             {isFull ? (
-                 <div className="flex items-center text-xs text-gray-400 font-medium gap-1">
-                    <Lock className="h-3 w-3" /> Full
-                 </div>
-             ) : (
-                 <div className="text-xs text-green-600 font-medium">
-                    Open
-                 </div>
-             )}
+             <Button
+                size="sm"
+                variant={canStartSession ? "default" : "secondary"}
+                className={`h-8 text-xs ${canStartSession ? 'bg-green-600 hover:bg-green-700' : 'opacity-50 cursor-not-allowed'}`}
+                disabled={!canStartSession}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    if (canStartSession && onStartSession) {
+                        onStartSession(team.id);
+                    }
+                }}
+             >
+                <Play className="h-3 w-3 mr-1.5" />
+                Start Session
+             </Button>
         </div>
     </div>
   );
