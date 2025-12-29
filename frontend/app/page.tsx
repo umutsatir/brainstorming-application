@@ -217,7 +217,7 @@ export default function Home() {
               <div className="flex items-center gap-3">
                   {(user?.role === "EVENT_MANAGER" || user?.role === "ROLE_EVENT_MANAGER" || 
                     user?.role === "TEAM_LEADER" || user?.role === "ROLE_TEAM_LEADER") && (
-                      <Link href="/dashboard/teams">
+                      <Link href="/dashboard">
                           <Button 
                             variant="outline" 
                             className="bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:text-blue-600 hover:border-blue-100 transition-all rounded-full px-6 shadow-sm"
@@ -404,7 +404,7 @@ export default function Home() {
                                       <div key={member.id} className="group p-3 rounded-2xl bg-gray-50 border border-gray-100 hover:bg-white hover:shadow-md transition-all flex items-center justify-between">
                                           <div className="flex items-center gap-4">
                                               <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
-                                                  member.is_team_leader || member.isTeamLeader
+                                                  member.is_team_leader || member.is_team_leader
                                                       ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white" 
                                                       : "bg-white border border-gray-200 text-gray-600"
                                               }`}>
@@ -418,7 +418,7 @@ export default function Home() {
                                                    }</p>
                                               </div>
                                           </div>
-                                          {(member.is_team_leader || member.isTeamLeader) && (
+                                          {(member.is_team_leader || member.is_team_leader) && (
                                               <Crown className="h-4 w-4 text-amber-500" />
                                           )}
                                       </div>
