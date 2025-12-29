@@ -217,7 +217,7 @@ export default function Home() {
               <div className="flex items-center gap-3">
                   {(user?.role === "EVENT_MANAGER" || user?.role === "ROLE_EVENT_MANAGER" || 
                     user?.role === "TEAM_LEADER" || user?.role === "ROLE_TEAM_LEADER") && (
-                      <Link href="/dashboard/teams">
+                      <Link href="/dashboard">
                           <Button 
                             variant="outline" 
                             className="bg-white hover:bg-gray-50 text-gray-600 border-gray-200 hover:text-blue-600 hover:border-blue-100 transition-all rounded-full px-6 shadow-sm"
