@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { api } from "@/lib/api";
+import { CreateTopicModal } from "@/components/topics/CreateTopicModal";
 
 interface Topic {
   id: number;
@@ -17,16 +19,25 @@ interface Topic {
 }
 
 export default function TopicsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const eventId = searchParams.get("eventId");
+
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const itemsPerPage = 5;
 
   useEffect(() => {
-    fetchTopics();
-  }, []);
+    if (eventId) {
+      fetchTopics();
+    } else {
+      setLoading(false);
+    }
+  }, [eventId]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -34,8 +45,9 @@ export default function TopicsPage() {
   }, [searchTerm, statusFilter]);
 
   const fetchTopics = async () => {
+    if (!eventId) return;
     try {
-      const response = await api.get("/topics");
+      const response = await api.get(`/events/${eventId}/topics`);
       setTopics(response.data);
     } catch (error) {
       console.error("Failed to fetch topics:", error);
@@ -77,6 +89,23 @@ export default function TopicsPage() {
   const endIndex = Math.min(startIndex + itemsPerPage, filteredTopics.length);
   const currentTopics = filteredTopics.slice(startIndex, endIndex);
 
+  if (!eventId) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <div className="h-16 w-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mb-4">
+          <MessageSquare className="h-8 w-8" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">No Event Selected</h2>
+        <p className="text-gray-500 max-w-md mt-2">
+          Please select an event from the Events page to view and manage its topics.
+        </p>
+        <Button className="mt-6" onClick={() => router.push("/dashboard/events")}>
+          Go to Events
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -87,7 +116,10 @@ export default function TopicsPage() {
             Oversee and organize all brainstorming sessions for this event. Manage status, edits, and deletions.
           </p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
+        <Button 
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
           <Plus className="mr-2 h-4 w-4" /> New Topic
         </Button>
       </div>
@@ -228,6 +260,13 @@ export default function TopicsPage() {
           </div>
         )}
       </div>
+
+      <CreateTopicModal 
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={fetchTopics}
+        eventId={Number(eventId)}
+      />
     </div>
   );
 }
