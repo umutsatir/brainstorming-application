@@ -154,6 +154,7 @@ public class TeamService {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new RuntimeException("Team not found"));
 
+        User oldLeader = team.getLeader();
         User newLeader = userRepository.findById(newLeaderId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -164,6 +165,19 @@ public class TeamService {
         // Update the team leader
         team.setLeader(newLeader);
         Team savedTeam = teamRepository.save(team);
+
+        // Update roles if necessary
+        // Demote old leader if not EVENT_MANAGER
+        if (oldLeader.getRole() != User.Role.EVENT_MANAGER) {
+            oldLeader.setRole(User.Role.TEAM_MEMBER);
+            userRepository.save(oldLeader);
+        }
+
+        // Promote new leader if not EVENT_MANAGER
+        if (newLeader.getRole() != User.Role.EVENT_MANAGER) {
+            newLeader.setRole(User.Role.TEAM_LEADER);
+            userRepository.save(newLeader);
+        }
 
         return teamMapper.toDto(savedTeam);
     }

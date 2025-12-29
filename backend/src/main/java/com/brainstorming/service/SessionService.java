@@ -49,22 +49,27 @@ public class SessionService {
 
     @Transactional
     public SessionDto createSession(CreateSessionRequest request) {
-        Team team = teamRepository.findById(request.getTeamId())
-                .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
+        try {
+            Team team = teamRepository.findById(request.getTeamId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
 
-        Topic topic = topicRepository.findById(request.getTopicId())
-                .orElseThrow(() -> new ResourceNotFoundException("Topic not found"));
+            Topic topic = topicRepository.findById(request.getTopicId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Topic not found"));
 
-        Session session = Session.builder()
-                .team(team)
-                .topic(topic)
-                .status(Session.Status.PENDING)
-                .currentRound(1)
-                .roundCount(request.getRoundCount() != null ? request.getRoundCount() : 5)
-                .build();
+            Session session = Session.builder()
+                    .team(team)
+                    .topic(topic)
+                    .status(Session.Status.PENDING)
+                    .currentRound(1)
+                    .roundCount(request.getRoundCount() != null ? request.getRoundCount() : 5)
+                    .build();
 
-        Session saved = sessionRepository.save(session);
-        return mapToSessionDto(saved);
+            Session saved = sessionRepository.save(session);
+            return mapToSessionDto(saved);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new BadRequestException("Error creating session: " + e.getMessage());
+        }
     }
 
     public void checkSessionAccess(Long sessionId, Long userId) {

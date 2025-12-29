@@ -1,13 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, Users, Bell, Search, User, MessageSquare } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { LayoutDashboard, Calendar, Users, Bell, Search, User, MessageSquare, Home, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +29,14 @@ export function Navbar() {
     }
   }, []);
 
+  const handleSignOut = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
   const navigation = [
+    { name: "Home", href: "/", icon: Home },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Events", href: "/dashboard/events", icon: Calendar },
   ];
@@ -45,7 +59,10 @@ export function Navbar() {
 
       <nav className="hidden md:flex items-center gap-1">
         {filteredNavigation.map((item) => {
-          const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+          const isActive = item.href === '/' 
+            ? pathname === '/' 
+            : pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+          
           return (
             <Link
               key={item.name}
@@ -70,9 +87,19 @@ export function Navbar() {
               <Bell className="h-5 w-5" />
             </Button>
             
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 cursor-pointer hover:shadow-lg transition-shadow">
-              <User className="h-4 w-4" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 cursor-pointer hover:shadow-lg transition-shadow">
+                  <User className="h-4 w-4" />
+                </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleSignOut} className="text-red-600 cursor-pointer focus:text-red-600 focus:bg-red-50">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
         </div>
       </div>
     </header>
