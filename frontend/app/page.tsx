@@ -288,7 +288,7 @@ export default function Home() {
                           </div>
 
                           {activeSession ? (
-                              <Link href={`/session/${activeSession.id}`} className="flex-shrink-0 relative z-10">
+                              <Link href={`/sessions/${activeSession.id}`} className="flex-shrink-0 relative z-10">
                                   <Button className="h-14 px-8 bg-white text-blue-600 hover:bg-blue-50 font-bold text-lg rounded-xl shadow-lg transition-all hover:shadow-xl hover:-translate-y-1 border-0">
                                       Join Session <ArrowRight className="ml-2 h-5 w-5" />
                                   </Button>

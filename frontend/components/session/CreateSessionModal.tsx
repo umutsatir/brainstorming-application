@@ -70,10 +70,11 @@ export function CreateSessionModal({
 
         try {
             // Create the session
+            // IMPORTANT: Backend expects snake_case due to Jackson configuration
             const response = await api.post(`/teams/${teamId}/sessions`, {
-                teamId, // Required for backend validation
-                topicId: selectedTopicId,
-                roundCount: roundCount,
+                team_id: teamId,
+                topic_id: selectedTopicId,
+                round_count: roundCount,
             });
 
             const sessionId = response.data.id;

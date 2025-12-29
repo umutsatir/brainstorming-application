@@ -193,9 +193,6 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard Overview</h1>
           <p className="text-gray-500 mt-1">Good morning, Alex. Here is what's happening today.</p>
         </div>
-        <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-          + Start New Session
-        </Button>
       </div>
 
       {/* Stats Cards */}

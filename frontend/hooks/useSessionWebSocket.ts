@@ -10,6 +10,7 @@ import {
     MemberSubmittedPayload,
     SubmitIdeasPayload,
 } from "@/types/session";
+import { WS_BASE_URL } from "@/lib/config";
 
 interface UseSessionWebSocketOptions {
     sessionId: number;
@@ -22,6 +23,7 @@ interface UseSessionWebSocketOptions {
     onSessionPaused?: () => void;
     onSessionResumed?: () => void;
     onSessionCompleted?: () => void;
+    onRefreshState?: () => void;
     onError?: (error: string) => void;
     onConnectionChange?: (connected: boolean) => void;
 }
@@ -34,7 +36,6 @@ interface UseSessionWebSocketReturn {
     disconnect: () => void;
 }
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/ws/sessions";
 const RECONNECT_DELAY = 3000;
 const MAX_RECONNECT_ATTEMPTS = 5;
 
@@ -52,6 +53,7 @@ export function useSessionWebSocket(
         onSessionPaused,
         onSessionResumed,
         onSessionCompleted,
+        onRefreshState,
         onError,
         onConnectionChange,
     } = options;
@@ -79,14 +81,18 @@ export function useSessionWebSocket(
                         break;
 
                     case WsMessageType.TIMER_TICK:
+                    case "timer_tick":
                         onTimerTick?.(message.payload as TimerTickPayload);
                         break;
 
                     case WsMessageType.ROUND_START:
+                    case "round_start":
+                        console.log('WebSocket received round_start event:', message.payload);
                         onRoundStart?.(message.payload as RoundStartPayload);
                         break;
 
                     case WsMessageType.ROUND_END:
+                    case "round_end":
                         onRoundEnd?.();
                         break;
 
@@ -96,15 +102,23 @@ export function useSessionWebSocket(
                         break;
 
                     case WsMessageType.SESSION_PAUSED:
+                    case "session_paused":
                         onSessionPaused?.();
                         break;
 
                     case WsMessageType.SESSION_RESUMED:
+                    case "session_resumed":
                         onSessionResumed?.();
                         break;
 
                     case WsMessageType.SESSION_COMPLETED:
+                    case "session_completed":
                         onSessionCompleted?.();
+                        break;
+
+                    case "refresh_state":
+                        console.log('Received refresh_state signal from backend');
+                        onRefreshState?.();
                         break;
 
                     case WsMessageType.ERROR:
@@ -134,6 +148,7 @@ export function useSessionWebSocket(
             onSessionPaused,
             onSessionResumed,
             onSessionCompleted,
+            onRefreshState,
             onError,
         ]
     );
@@ -159,7 +174,8 @@ export function useSessionWebSocket(
         ws.onmessage = handleMessage;
 
         ws.onclose = (event) => {
-            console.log("WebSocket closed:", event.code, event.reason);
+            console.log("WebSocket closed:", event.code, event.reason, "wasClean:", event.wasClean);
+            console.trace("WebSocket close stack trace");
             setIsConnected(false);
             onConnectionChange?.(false);
 
@@ -218,9 +234,13 @@ export function useSessionWebSocket(
 
     const submitIdeas = useCallback((payload: SubmitIdeasPayload) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
-            const message: WsMessage = {
-                type: WsMessageType.SUBMIT_IDEAS,
-                payload,
+            // Backend expects lowercase snake_case message type
+            const message = {
+                type: "submit_ideas",
+                payload: {
+                    roundNumber: payload.round_number,
+                    ideas: payload.ideas
+                },
                 timestamp: new Date().toISOString(),
             };
             wsRef.current.send(JSON.stringify(message));
