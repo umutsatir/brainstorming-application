@@ -45,21 +45,26 @@ export default function DashboardPage() {
           api.get('/ideas')
         ]);
 
-        const users = usersRes.data;
+        const usersData = usersRes.data;
         const teams = teamsRes.data;
         const sessions = sessionsRes.data;
         const ideas = ideasRes.data;
 
+        // Handle potential pagination in users response
+        const totalParticipants = usersData.totalElements !== undefined 
+          ? usersData.totalElements 
+          : (Array.isArray(usersData) ? usersData.length : 0);
+
         // Process Stats
         const stats = {
-          totalParticipants: users.length,
-          activeTeams: teams.length,
-          completedSessions: sessions.filter((s: any) => s.status === 'COMPLETED').length,
-          ideasGenerated: ideas.length
+          totalParticipants: totalParticipants,
+          activeTeams: Array.isArray(teams) ? teams.length : 0,
+          completedSessions: Array.isArray(sessions) ? sessions.filter((s: any) => s.status === 'COMPLETED').length : 0,
+          ideasGenerated: Array.isArray(ideas) ? ideas.length : 0
         };
 
         // Process Active Topics (Sessions that are RUNNING or PAUSED)
-        const activeSessions = sessions.filter((s: any) => s.status === 'RUNNING' || s.status === 'PAUSED');
+        const activeSessions = Array.isArray(sessions) ? sessions.filter((s: any) => s.status === 'RUNNING' || s.status === 'PAUSED') : [];
         const activeTopics = activeSessions.map((session: any) => {
           const progress = session.roundCount > 0 
             ? Math.round((session.currentRound / session.roundCount) * 100) 
@@ -75,33 +80,37 @@ export default function DashboardPage() {
 
         // Process Recent Activity (Mocking from sessions/ideas for now as we don't have a global audit log endpoint)
         // We'll take the last 5 sessions/ideas and mix them
-        const recentActivities = [];
+        const recentActivities: any[] = [];
         
         // Add recent sessions
-        sessions.slice(0, 3).forEach((s: any) => {
-           recentActivities.push({
-             user: "System",
-             action: s.status === 'COMPLETED' ? "completed session" : "updated session",
-             target: s.topicTitle,
-             message: `Round ${s.currentRound}/${s.roundCount}`,
-             time: "Recently",
-             type: s.status === 'COMPLETED' ? 'completion' : 'update',
-             avatarColor: "bg-blue-100 text-blue-600"
-           });
-        });
+        if (Array.isArray(sessions)) {
+          sessions.slice(0, 3).forEach((s: any) => {
+             recentActivities.push({
+               user: "System",
+               action: s.status === 'COMPLETED' ? "completed session" : "updated session",
+               target: s.topicTitle,
+               message: `Round ${s.currentRound}/${s.roundCount}`,
+               time: "Recently",
+               type: s.status === 'COMPLETED' ? 'completion' : 'update',
+               avatarColor: "bg-blue-100 text-blue-600"
+             });
+          });
+        }
 
         // Add recent ideas (if any)
-        ideas.slice(0, 2).forEach((idea: any) => {
-            recentActivities.push({
-                user: "Team Member", // We might not have user name easily here without extra calls
-                action: "submitted idea",
-                target: "Brainstorming",
-                message: idea.content ? idea.content.substring(0, 30) + "..." : "New idea",
-                time: "Recently",
-                type: "submission",
-                avatarColor: "bg-purple-100 text-purple-600"
-            });
-        });
+        if (Array.isArray(ideas)) {
+          ideas.slice(0, 2).forEach((idea: any) => {
+              recentActivities.push({
+                  user: "Team Member", // We might not have user name easily here without extra calls
+                  action: "submitted idea",
+                  target: "Brainstorming",
+                  message: idea.content ? idea.content.substring(0, 30) + "..." : "New idea",
+                  time: "Recently",
+                  type: "submission",
+                  avatarColor: "bg-purple-100 text-purple-600"
+              });
+          });
+        }
 
         setData({
           stats,
