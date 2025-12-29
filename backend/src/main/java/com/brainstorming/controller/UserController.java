@@ -5,9 +5,14 @@ import com.brainstorming.exception.ResourceNotFoundException;
 import com.brainstorming.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import com.brainstorming.entity.User;
+import com.brainstorming.mapper.UserMapper;
+import com.brainstorming.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -15,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
     
     /**
      * GET /users - Get paginated list of all users.
@@ -50,7 +57,7 @@ public class UserController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('EVENT_MANAGER')")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
-        // TODO: Implement delete user
+        userRepository.deleteById(id);
         return ResponseEntity.noContent().build();
     }
 }

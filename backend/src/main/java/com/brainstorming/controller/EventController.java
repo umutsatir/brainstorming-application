@@ -4,6 +4,8 @@ import com.brainstorming.dto.*;
 import com.brainstorming.entity.User;
 import com.brainstorming.service.EventService;
 import com.brainstorming.service.TeamService;
+import com.brainstorming.service.TopicService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +21,7 @@ public class EventController {
 
     private final EventService eventService;
     private final TeamService teamService;
+    private final TopicService topicService;
     private final com.brainstorming.repository.UserRepository userRepository;
 
     @GetMapping
@@ -96,6 +99,18 @@ public class EventController {
     @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
     public ResponseEntity<List<TeamDto>> getEventTeams(@PathVariable Long eventId) {
         return ResponseEntity.ok(eventService.getEventTeams(eventId));
+    }
+
+    @PostMapping("/{eventId}/topics")
+    @PreAuthorize("hasRole('EVENT_MANAGER')")
+    public ResponseEntity<TopicDto> createTopic(@PathVariable Long eventId, @Valid @RequestBody CreateTopicRequest request) {
+        return ResponseEntity.status(201).body(topicService.createTopic(eventId, request));
+    }
+
+    @GetMapping("/{eventId}/topics")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TopicDto>> getTopicsByEvent(@PathVariable Long eventId) {
+        return ResponseEntity.ok(topicService.getTopicsByEventId(eventId));
     }
 
 }
