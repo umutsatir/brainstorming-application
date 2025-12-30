@@ -145,14 +145,6 @@ export default function TeamsPage() {
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
                 <div className="flex items-center gap-3">
-                    <Button 
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 transition-all hover:shadow-lg hover:translate-y-[-1px]"
-                        onClick={handleCreateClick}
-                        disabled={!eventId}
-                    >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create New Team
-                    </Button>
                 </div>
             </div>
         </div>

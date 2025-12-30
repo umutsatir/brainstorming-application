@@ -141,14 +141,6 @@ export default function EventsPage() {
                         : "View events you are participating in or leading."}
                 </p>
             </div>
-            {canManageEvents && (
-                <Button 
-                    onClick={handleCreateClick}
-                    className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20"
-                >
-                    <Plus className="mr-2 h-4 w-4" /> Create New Event
-                </Button>
-            )}
         </div>
 
         {/* Search Bar */}
@@ -170,14 +162,27 @@ export default function EventsPage() {
         ) : filteredEvents.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredEvents.map((event) => (
-                    <EventCard 
-                        key={event.id} 
-                        event={event} 
+                    <EventCard
+                        key={event.id}
+                        event={event}
                         onDelete={handleDeleteClick}
                         onEdit={handleEditClick}
                         canManage={canManageEvents}
                     />
                 ))}
+
+                {/* Add Event Card */}
+                {canManageEvents && (
+                    <div
+                        className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex flex-col items-center justify-center gap-2 h-full min-h-[200px] hover:border-blue-400 hover:bg-blue-50/50 transition-all cursor-pointer group"
+                        onClick={handleCreateClick}
+                    >
+                        <div className="h-12 w-12 rounded-full bg-gray-50 group-hover:bg-blue-100 flex items-center justify-center text-gray-400 group-hover:text-blue-600 transition-colors">
+                            <Plus className="h-6 w-6" />
+                        </div>
+                        <span className="font-medium text-gray-500 group-hover:text-blue-600">Add Another Event</span>
+                    </div>
+                )}
             </div>
         ) : (
             <div className="flex flex-col items-center justify-center h-64 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
