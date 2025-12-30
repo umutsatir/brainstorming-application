@@ -116,8 +116,8 @@ export default function TopicsPage() {
             Oversee and organize all brainstorming sessions for this event. Manage status, edits, and deletions.
           </p>
         </div>
-        <Button 
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20"
+        <Button
+          className="bg-blue-500 hover:bg-blue-600 text-white shadow-lg shadow-blue-500/20"
           onClick={() => setIsCreateModalOpen(true)}
         >
           <Plus className="mr-2 h-4 w-4" /> New Topic

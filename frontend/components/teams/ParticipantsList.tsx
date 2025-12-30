@@ -28,9 +28,10 @@ interface ParticipantsListProps {
   userRole?: string | null;
   onTeamUpdated?: () => void;
   capacity?: number;
+  eventId?: number | null;
 }
 
-export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, capacity = 6 }: ParticipantsListProps) {
+export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, capacity = 6, eventId }: ParticipantsListProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [allUsers, setAllUsers] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +80,12 @@ export function ParticipantsList({ teamId, teamName, userRole, onTeamUpdated, ca
   const fetchAllUsers = async () => {
     try {
       const response = await api.get(`/users`, {
-        params: { search: searchQuery, page: 0, size: 50 }
+        params: {
+          search: searchQuery,
+          page: 0,
+          size: 50,
+          eventId: eventId || undefined // Pass eventId to filter out users already in teams
+        }
       });
       // Handle paginated response
       const users = response.data.content || response.data;
