@@ -17,12 +17,12 @@ export function ConnectionStatus({
 
     return (
         <div className="fixed bottom-4 right-4 z-50">
-            <div className="bg-zinc-900 border border-amber-500/50 rounded-lg p-4 shadow-xl max-w-sm">
+            <div className="bg-white border border-amber-300 rounded-lg p-4 shadow-xl max-w-sm">
                 <div className="flex items-start gap-3">
                     {isReconnecting ? (
                         <div className="flex-shrink-0">
                             <svg
-                                className="w-5 h-5 text-amber-400 animate-spin"
+                                className="w-5 h-5 text-amber-600 animate-spin"
                                 fill="none"
                                 viewBox="0 0 24 24"
                             >
@@ -44,7 +44,7 @@ export function ConnectionStatus({
                     ) : (
                         <div className="flex-shrink-0">
                             <svg
-                                className="w-5 h-5 text-red-400"
+                                className="w-5 h-5 text-red-500"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                             >
@@ -57,10 +57,10 @@ export function ConnectionStatus({
                         </div>
                     )}
                     <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-white">
+                        <h3 className="text-sm font-semibold text-gray-900">
                             {isReconnecting ? "Reconnecting..." : "Connection Lost"}
                         </h3>
-                        <p className="text-xs text-zinc-400 mt-1">
+                        <p className="text-xs text-gray-600 mt-1">
                             {isReconnecting
                                 ? "Attempting to restore your connection. Please wait..."
                                 : "Unable to connect to the session. Your progress is saved."}
@@ -68,7 +68,7 @@ export function ConnectionStatus({
                         {!isReconnecting && (
                             <button
                                 onClick={onReconnect}
-                                className="mt-2 text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                                className="mt-2 text-xs font-medium text-amber-600 hover:text-amber-700 transition-colors"
                             >
                                 Try Again →
                             </button>

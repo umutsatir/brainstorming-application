@@ -16,11 +16,11 @@ export function TeamSubmissionStatus({
     const allSubmitted = submittedCount === totalCount;
 
     return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <svg
-                        className="w-5 h-5 text-zinc-400"
+                        className="w-5 h-5 text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -37,8 +37,8 @@ export function TeamSubmissionStatus({
                 <span
                     className={`text-sm font-medium px-2 py-1 rounded-full ${
                         allSubmitted
-                            ? "bg-emerald-500/20 text-emerald-400"
-                            : "bg-zinc-700 text-zinc-300"
+                            ? "bg-green-50 text-green-700 border border-green-200"
+                            : "bg-gray-100 text-gray-600"
                     }`}
                 >
                     {submittedCount}/{totalCount} submitted
@@ -46,10 +46,10 @@ export function TeamSubmissionStatus({
             </div>
 
             {/* Progress bar */}
-            <div className="h-2 bg-zinc-800 rounded-full overflow-hidden mb-4">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-4">
                 <div
                     className={`h-full transition-all duration-500 ${
-                        allSubmitted ? "bg-emerald-500" : "bg-blue-500"
+                        allSubmitted ? "bg-green-500" : "bg-blue-600"
                     }`}
                     style={{ width: `${(submittedCount / totalCount) * 100}%` }}
                 />
@@ -59,34 +59,34 @@ export function TeamSubmissionStatus({
             <div className="space-y-2">
                 {submissions.map((member) => {
                     const isCurrentUser = member.user_id === currentUserId;
-                    
+
                     return (
                         <div
                             key={member.user_id}
                             className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
                                 member.submitted
-                                    ? "bg-emerald-500/10 border border-emerald-500/20"
-                                    : "bg-zinc-800/50 border border-zinc-700"
+                                    ? "bg-green-50 border border-green-200"
+                                    : "bg-gray-50 border border-gray-200"
                             }`}
                         >
                             <div className="flex items-center gap-3">
                                 <div
                                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                                         member.submitted
-                                            ? "bg-emerald-500/20 text-emerald-400"
-                                            : "bg-zinc-700 text-zinc-400"
+                                            ? "bg-green-100 text-green-700"
+                                            : "bg-gray-200 text-gray-600"
                                     }`}
                                 >
                                     {member.user_name.charAt(0).toUpperCase()}
                                 </div>
                                 <span
                                     className={`font-medium ${
-                                        isCurrentUser ? "text-white" : "text-zinc-300"
+                                        isCurrentUser ? "text-gray-900" : "text-gray-700"
                                     }`}
                                 >
                                     {member.user_name}
                                     {isCurrentUser && (
-                                        <span className="ml-2 text-xs text-zinc-500">(You)</span>
+                                        <span className="ml-2 text-xs text-gray-500">(You)</span>
                                     )}
                                 </span>
                             </div>
@@ -94,7 +94,7 @@ export function TeamSubmissionStatus({
                                 {member.submitted ? (
                                     <>
                                         <svg
-                                            className="w-5 h-5 text-emerald-400"
+                                            className="w-5 h-5 text-green-500"
                                             fill="currentColor"
                                             viewBox="0 0 20 20"
                                         >
@@ -104,14 +104,14 @@ export function TeamSubmissionStatus({
                                                 clipRule="evenodd"
                                             />
                                         </svg>
-                                        <span className="text-sm text-emerald-400">Submitted</span>
+                                        <span className="text-sm text-green-700">Submitted</span>
                                     </>
                                 ) : (
                                     <>
                                         <div className="w-5 h-5 flex items-center justify-center">
-                                            <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                                            <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                                         </div>
-                                        <span className="text-sm text-amber-400">Pending</span>
+                                        <span className="text-sm text-amber-600">Pending</span>
                                     </>
                                 )}
                             </div>
@@ -121,8 +121,8 @@ export function TeamSubmissionStatus({
             </div>
 
             {allSubmitted && (
-                <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-center">
-                    <p className="text-sm text-emerald-400">
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-center">
+                    <p className="text-sm text-green-700">
                         ✨ All team members have submitted their ideas!
                     </p>
                 </div>

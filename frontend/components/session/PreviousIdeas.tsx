@@ -11,10 +11,10 @@ interface PreviousIdeasProps {
 export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasProps) {
     if (roundNumber === 1) {
         return (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <svg
-                        className="w-5 h-5 text-zinc-400"
+                        className="w-5 h-5 text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -28,11 +28,11 @@ export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasP
                     </svg>
                     Round 1 - Fresh Start
                 </h2>
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-6 text-center">
-                    <div className="text-zinc-400 mb-2">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                    <div className="text-gray-700 mb-2">
                         This is the first round. Create your own original ideas!
                     </div>
-                    <div className="text-sm text-zinc-500">
+                    <div className="text-sm text-gray-600">
                         In subsequent rounds, you'll build upon ideas from your teammates.
                     </div>
                 </div>
@@ -42,10 +42,10 @@ export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasP
 
     if (ideas.length === 0) {
         return (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                     <svg
-                        className="w-5 h-5 text-zinc-400"
+                        className="w-5 h-5 text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -59,8 +59,8 @@ export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasP
                     </svg>
                     Ideas from Previous Round
                 </h2>
-                <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-6 text-center">
-                    <div className="text-zinc-400">
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                    <div className="text-gray-500">
                         Waiting for ideas from your teammate...
                     </div>
                 </div>
@@ -69,10 +69,10 @@ export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasP
     }
 
     return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
                 <svg
-                    className="w-5 h-5 text-zinc-400"
+                    className="w-5 h-5 text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -86,28 +86,28 @@ export function PreviousIdeas({ ideas, authorName, roundNumber }: PreviousIdeasP
                 </svg>
                 Build Upon These Ideas
             </h2>
-            <p className="text-sm text-zinc-400 mb-4">
-                From <span className="text-zinc-200 font-medium">{authorName}</span> in Round {roundNumber - 1}
+            <p className="text-sm text-gray-500 mb-4">
+                From <span className="text-gray-900 font-medium">{authorName}</span> in Round {roundNumber - 1}
             </p>
 
             <div className="space-y-3">
                 {ideas.map((idea, index) => (
                     <div
                         key={idea.id}
-                        className="bg-zinc-800/50 border border-zinc-700 rounded-lg p-4 hover:border-zinc-600 transition-colors"
+                        className="bg-gray-50 border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
                     >
                         <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 bg-zinc-700 rounded-full flex items-center justify-center text-sm font-medium text-zinc-300">
+                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-medium text-blue-700">
                                 {index + 1}
                             </div>
-                            <p className="text-zinc-200 leading-relaxed">{idea.text}</p>
+                            <p className="text-gray-700 leading-relaxed">{idea.text}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
-            <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                <p className="text-sm text-emerald-400">
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700">
                     💡 Tip: Use these ideas as inspiration. Expand, combine, or create variations!
                 </p>
             </div>

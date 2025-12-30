@@ -310,10 +310,10 @@ export function SessionPageClient({
     // Loading state
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <svg
-                        className="animate-spin h-10 w-10 text-emerald-400"
+                        className="animate-spin h-10 w-10 text-blue-600"
                         fill="none"
                         viewBox="0 0 24 24"
                     >
@@ -331,7 +331,7 @@ export function SessionPageClient({
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                     </svg>
-                    <p className="text-zinc-400">Loading session...</p>
+                    <p className="text-gray-500">Loading session...</p>
                 </div>
             </div>
         );
@@ -340,10 +340,10 @@ export function SessionPageClient({
     // Error state
     if (error || !session) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 max-w-md text-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="bg-white border border-gray-200 rounded-xl p-8 max-w-md text-center shadow-lg">
                     <svg
-                        className="w-12 h-12 text-red-400 mx-auto mb-4"
+                        className="w-12 h-12 text-red-500 mx-auto mb-4"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                     >
@@ -353,11 +353,11 @@ export function SessionPageClient({
                             clipRule="evenodd"
                         />
                     </svg>
-                    <h2 className="text-xl font-semibold text-white mb-2">Unable to Load Session</h2>
-                    <p className="text-zinc-400 mb-6">{error || "Session not found"}</p>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Load Session</h2>
+                    <p className="text-gray-500 mb-6">{error || "Session not found"}</p>
                     <button
                         onClick={fetchSessionState}
-                        className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                     >
                         Try Again
                     </button>
@@ -369,10 +369,10 @@ export function SessionPageClient({
     // Session completed state
     if (session.status === SessionStatus.COMPLETED) {
         return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 max-w-md text-center">
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="bg-white border border-gray-200 rounded-xl p-8 max-w-md text-center shadow-lg">
                     <svg
-                        className="w-12 h-12 text-emerald-400 mx-auto mb-4"
+                        className="w-12 h-12 text-green-500 mx-auto mb-4"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                     >
@@ -382,15 +382,15 @@ export function SessionPageClient({
                             clipRule="evenodd"
                         />
                     </svg>
-                    <h2 className="text-xl font-semibold text-white mb-2">Session Completed!</h2>
-                    <p className="text-zinc-400 mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Completed!</h2>
+                    <p className="text-gray-500 mb-6">
                         Great work! The brainstorming session has ended.
                     </p>
                     <div className="flex flex-col gap-3">
                         {userRole === "member" ? (
                             <button
                                 onClick={() => router.push("/")}
-                                className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
+                                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                             >
                                 Go to Main Page
                             </button>
@@ -398,13 +398,13 @@ export function SessionPageClient({
                             <>
                                 <button
                                     onClick={() => router.push(`/sessions/${sessionId}/summary`)}
-                                    className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
+                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                                 >
                                     View Session Summary
                                 </button>
                                 <button
                                     onClick={() => router.push("/dashboard")}
-                                    className="px-6 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded-lg font-medium transition-colors"
+                                    className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors"
                                 >
                                     Go to Dashboard
                                 </button>
@@ -423,14 +423,14 @@ export function SessionPageClient({
     const canControlSession = userRole === "leader" || userRole === "manager";
 
     return (
-        <div className="min-h-screen bg-black">
+        <div className="min-h-screen bg-gray-50">
             <div className="max-w-6xl mx-auto px-4 py-8">
                 {/* View-only banner for managers only */}
                 {isViewOnly && (
-                    <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                         <div className="flex items-center gap-3">
                             <svg
-                                className="w-5 h-5 text-blue-400"
+                                className="w-5 h-5 text-blue-600"
                                 fill="currentColor"
                                 viewBox="0 0 20 20"
                             >
@@ -441,7 +441,7 @@ export function SessionPageClient({
                                     clipRule="evenodd"
                                 />
                             </svg>
-                            <p className="text-sm text-blue-400">
+                            <p className="text-sm text-blue-700">
                                 <span className="font-semibold">View-only mode.</span> As an event manager, you can
                                 observe the session but cannot submit ideas.
                             </p>
@@ -463,12 +463,12 @@ export function SessionPageClient({
                     {/* Main content - 2 columns */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Timer or Waiting for Next Round */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8">
+                        <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
                             {isWaitingForNextRound ? (
                                 <div className="text-center">
                                     <div className="flex items-center justify-center gap-3 mb-2">
                                         <svg
-                                            className="animate-spin h-8 w-8 text-emerald-400"
+                                            className="animate-spin h-8 w-8 text-blue-600"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                         >
@@ -486,9 +486,9 @@ export function SessionPageClient({
                                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                                             />
                                         </svg>
-                                        <h3 className="text-2xl font-bold text-emerald-400">Preparing Next Round...</h3>
+                                        <h3 className="text-2xl font-bold text-blue-600">Preparing Next Round...</h3>
                                     </div>
-                                    <p className="text-zinc-400">Please wait while we set up the next round</p>
+                                    <p className="text-gray-500">Please wait while we set up the next round</p>
                                 </div>
                             ) : (
                                 <TimerDisplay
@@ -538,29 +538,29 @@ export function SessionPageClient({
                         />
 
                         {/* Session info card */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-                            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+                        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+                            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">
                                 Session Rules
                             </h3>
-                            <ul className="space-y-3 text-sm text-zinc-400">
+                            <ul className="space-y-3 text-sm text-gray-600">
                                 <li className="flex items-start gap-2">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
+                                    <span className="text-blue-600 mt-0.5">•</span>
                                     Submit exactly 3 ideas per round
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
+                                    <span className="text-blue-600 mt-0.5">•</span>
                                     All ideas must be unique and non-empty
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
+                                    <span className="text-blue-600 mt-0.5">•</span>
                                     Build upon previous round's ideas
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
+                                    <span className="text-blue-600 mt-0.5">•</span>
                                     5 minutes per round
                                 </li>
                                 <li className="flex items-start gap-2">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
+                                    <span className="text-blue-600 mt-0.5">•</span>
                                     {session.round_count} total rounds
                                 </li>
                             </ul>

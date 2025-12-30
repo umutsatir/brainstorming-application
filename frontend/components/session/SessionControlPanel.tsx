@@ -77,20 +77,20 @@ export function SessionControlPanel({
 
     const getButtonClasses = (color: string) => {
         const baseClasses = "px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2";
-        
+
         if (isLoading) {
-            return `${baseClasses} bg-zinc-700 text-zinc-400 cursor-not-allowed`;
+            return `${baseClasses} bg-gray-200 text-gray-400 cursor-not-allowed`;
         }
 
         switch (color) {
             case "emerald":
-                return `${baseClasses} bg-emerald-500 hover:bg-emerald-600 text-white`;
+                return `${baseClasses} bg-green-600 hover:bg-green-700 text-white`;
             case "amber":
                 return `${baseClasses} bg-amber-500 hover:bg-amber-600 text-white`;
             case "red":
                 return `${baseClasses} bg-red-500 hover:bg-red-600 text-white`;
             default:
-                return `${baseClasses} bg-zinc-600 hover:bg-zinc-500 text-white`;
+                return `${baseClasses} bg-gray-600 hover:bg-gray-700 text-white`;
         }
     };
 
@@ -133,8 +133,8 @@ export function SessionControlPanel({
     };
 
     return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4 flex items-center gap-2">
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                     <path
                         fillRule="evenodd"
@@ -182,12 +182,12 @@ export function SessionControlPanel({
             </div>
 
             {error && (
-                <div className="mt-3 p-2 bg-red-500/10 border border-red-500/20 rounded-lg">
-                    <p className="text-sm text-red-400">{error}</p>
+                <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-600">{error}</p>
                 </div>
             )}
 
-            <div className="mt-4 text-xs text-zinc-500">
+            <div className="mt-4 text-xs text-gray-500">
                 {status === SessionStatus.PENDING && (
                     <p>Start the session when all team members are ready.</p>
                 )}

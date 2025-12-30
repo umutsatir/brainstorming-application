@@ -93,25 +93,25 @@ export function IdeaInputForm({
 
     const getInputStyles = (index: number) => {
         const baseStyles =
-            "w-full bg-zinc-800 border rounded-lg p-4 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 transition-all resize-none";
-        
+            "w-full bg-white border rounded-lg p-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all resize-none";
+
         if (isSubmitted) {
-            return `${baseStyles} border-emerald-500/50 bg-emerald-500/5 cursor-not-allowed`;
+            return `${baseStyles} border-green-300 bg-green-50 cursor-not-allowed`;
         }
         if (isDisabled) {
-            return `${baseStyles} border-zinc-700 bg-zinc-800/50 cursor-not-allowed opacity-60`;
+            return `${baseStyles} border-gray-200 bg-gray-50 cursor-not-allowed opacity-60`;
         }
         if (ideas[index].trim()) {
-            return `${baseStyles} border-zinc-600 focus:border-emerald-500 focus:ring-emerald-500/20`;
+            return `${baseStyles} border-gray-300 focus:border-blue-500 focus:ring-blue-100`;
         }
-        return `${baseStyles} border-zinc-700 focus:border-zinc-500 focus:ring-zinc-500/20`;
+        return `${baseStyles} border-gray-200 focus:border-blue-400 focus:ring-blue-50`;
     };
 
     return (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-1 flex items-center gap-2">
+        <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
                 <svg
-                    className="w-5 h-5 text-zinc-400"
+                    className="w-5 h-5 text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -125,7 +125,7 @@ export function IdeaInputForm({
                 </svg>
                 {isSubmitted ? "Your Submitted Ideas" : "Enter Your Ideas"}
             </h2>
-            <p className="text-sm text-zinc-400 mb-4">
+            <p className="text-sm text-gray-500 mb-4">
                 {isSubmitted
                     ? "You have submitted your ideas for this round."
                     : isDisabled
@@ -136,7 +136,7 @@ export function IdeaInputForm({
             <div className="space-y-4">
                 {[0, 1, 2].map((index) => (
                     <div key={index} className="relative">
-                        <label className="block text-sm font-medium text-zinc-400 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
                             Idea {index + 1}
                         </label>
                         <div className="relative">
@@ -149,13 +149,13 @@ export function IdeaInputForm({
                                 maxLength={500}
                                 className={getInputStyles(index)}
                             />
-                            <div className="absolute bottom-2 right-2 text-xs text-zinc-500">
+                            <div className="absolute bottom-2 right-2 text-xs text-gray-400">
                                 {ideas[index].length}/500
                             </div>
                             {isSubmitted && (
                                 <div className="absolute top-2 right-2">
                                     <svg
-                                        className="w-5 h-5 text-emerald-400"
+                                        className="w-5 h-5 text-green-500"
                                         fill="currentColor"
                                         viewBox="0 0 20 20"
                                     >
@@ -216,8 +216,8 @@ export function IdeaInputForm({
                         disabled={!canSubmit}
                         className={`w-full py-3 px-4 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
                             canSubmit
-                                ? "bg-emerald-500 hover:bg-emerald-600 text-white"
-                                : "bg-zinc-700 text-zinc-400 cursor-not-allowed"
+                                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                                : "bg-gray-200 text-gray-400 cursor-not-allowed"
                         }`}
                     >
                         {isLoading ? (
@@ -266,8 +266,8 @@ export function IdeaInputForm({
             )}
 
             {isSubmitted && (
-                <div className="mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                    <p className="text-sm text-emerald-400 flex items-center gap-2">
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-sm text-green-700 flex items-center gap-2">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path
                                 fillRule="evenodd"
