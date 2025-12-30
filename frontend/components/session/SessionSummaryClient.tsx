@@ -12,10 +12,12 @@ import {
     LayoutGrid,
     List,
     ChevronRight,
-    Loader2
+    Loader2,
+    CornerUpLeft
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { jsPDF } from "jspdf";
 
 interface SessionSummaryClientProps {
     sessionId: number;
@@ -180,9 +182,186 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
         }
     };
 
-    const handleExportReport = () => {
-        // TODO: Implement export functionality
-        alert("Export report functionality coming soon!");
+    const handleExportReport = async () => {
+        if (!session) return;
+
+        const doc = new jsPDF();
+        
+        // Load a font that supports Turkish characters (Roboto)
+        try {
+            const fontResponse = await fetch('https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf');
+            if (fontResponse.ok) {
+                const fontBlob = await fontResponse.blob();
+                const reader = new FileReader();
+                await new Promise((resolve) => {
+                    reader.onloadend = () => {
+                        const base64data = reader.result as string;
+                        const base64 = base64data.split(',')[1];
+                        doc.addFileToVFS("Roboto-Regular.ttf", base64);
+                        doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
+                        doc.setFont("Roboto");
+                        resolve(true);
+                    };
+                    reader.readAsDataURL(fontBlob);
+                });
+            }
+        } catch (e) {
+            console.warn("Could not load custom font, falling back to default", e);
+        }
+
+        const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+        const contentWidth = pageWidth - (margin * 2);
+        let y = 20;
+
+        const checkPageBreak = (heightNeeded: number) => {
+            if (y + heightNeeded > pageHeight - margin) {
+                doc.addPage();
+                y = margin;
+                return true;
+            }
+            return false;
+        };
+
+        // --- Header ---
+        doc.setFontSize(22);
+        doc.setTextColor(37, 99, 235); // Blue-600
+        const title = `${session.topic_title || session.team_name} Report`;
+        const titleLines = doc.splitTextToSize(title, contentWidth);
+        doc.text(titleLines, margin, y);
+        y += (titleLines.length * 10) + 5;
+
+        doc.setFontSize(10);
+        doc.setTextColor(107, 114, 128); // Gray-500
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, margin, y);
+        y += 5;
+        doc.text(`Team: ${session.team_name}`, margin, y);
+        y += 5;
+        doc.text(`Participants: ${participants.map(p => p.name).join(", ")}`, margin, y);
+        y += 15;
+
+        // --- AI Summary ---
+        if (aiSummary) {
+            checkPageBreak(60); // Estimate height
+            
+            // Background Box
+            doc.setFillColor(239, 246, 255); // Blue-50
+            doc.setDrawColor(219, 234, 254); // Blue-100
+            
+            // Calculate text height
+            doc.setFontSize(11);
+            const summaryTextLines = doc.splitTextToSize(aiSummary.text, contentWidth - 10);
+            const summaryHeight = (summaryTextLines.length * 5) + 25 + (aiSummary.tags.length > 0 ? 15 : 0);
+            
+            doc.roundedRect(margin, y, contentWidth, summaryHeight, 3, 3, 'FD');
+            
+            let boxY = y + 10;
+            
+            // Title
+            doc.setFontSize(12);
+            doc.setTextColor(37, 99, 235); // Blue-600
+            doc.text("AI Executive Summary", margin + 5, boxY);
+            boxY += 8;
+            
+            // Text
+            doc.setFontSize(10);
+            doc.setTextColor(55, 65, 81); // Gray-700
+            doc.text(summaryTextLines, margin + 5, boxY);
+            boxY += (summaryTextLines.length * 5) + 5;
+            
+            // Tags
+            if (aiSummary.tags.length > 0) {
+                doc.setFontSize(9);
+                doc.setTextColor(75, 85, 99); // Gray-600
+                doc.text("Key Themes: " + aiSummary.tags.join(", "), margin + 5, boxY);
+            }
+            
+            y += summaryHeight + 10;
+        }
+
+        // --- Ideas ---
+        doc.setFontSize(16);
+        doc.setTextColor(17, 24, 39); // Gray-900
+        doc.text("Brainstorming Details", margin, y);
+        y += 10;
+
+        ideasByRound.forEach(round => {
+            checkPageBreak(20);
+            
+            // Round Header
+            doc.setFillColor(243, 244, 246); // Gray-100
+            doc.rect(margin, y, contentWidth, 8, 'F');
+            doc.setFontSize(11);
+            doc.setTextColor(31, 41, 55); // Gray-800
+            doc.text(`Round ${round.round_number}: ${round.round_title}`, margin + 2, y + 5.5);
+            y += 12;
+
+            // Ideas Cards
+            round.ideas.forEach(idea => {
+                doc.setFontSize(10);
+                const ideaTextLines = doc.splitTextToSize(idea.text, contentWidth - 20); // Padding
+                const cardHeight = (ideaTextLines.length * 5) + 20;
+                
+                checkPageBreak(cardHeight + 5);
+
+                // Card Box
+                doc.setDrawColor(229, 231, 235); // Gray-200
+                doc.setFillColor(255, 255, 255); // White
+                doc.roundedRect(margin, y, contentWidth, cardHeight, 2, 2, 'FD');
+
+                // Avatar Circle (Simulation)
+                doc.setFillColor(239, 246, 255); // Blue-50
+                doc.circle(margin + 8, y + 8, 4, 'F');
+                doc.setFontSize(7);
+                doc.setTextColor(37, 99, 235); // Blue-600
+                const initials = getInitials(idea.author_name);
+                doc.text(initials, margin + 6.5, y + 9);
+
+                // Author Name
+                doc.setFontSize(9);
+                doc.setTextColor(17, 24, 39); // Gray-900
+                // Bold simulation by printing twice with slight offset or just color
+                doc.text(idea.author_name, margin + 15, y + 9);
+
+                // Idea Text
+                doc.setFontSize(10);
+                doc.setTextColor(55, 65, 81); // Gray-700
+                doc.text(ideaTextLines, margin + 5, y + 18);
+
+                // Status Badge (if exists)
+                if (idea.status) {
+                    const statusText = idea.status.toUpperCase();
+                    doc.setFontSize(7);
+                    const badgeWidth = doc.getTextWidth(statusText) + 4;
+                    
+                    // Badge Color
+                    if (idea.status === 'selected') doc.setFillColor(219, 234, 254); // Blue-100
+                    else if (idea.status === 'risky') doc.setFillColor(255, 237, 213); // Orange-100
+                    else doc.setFillColor(243, 244, 246); // Gray-100
+
+                    doc.roundedRect(margin + contentWidth - badgeWidth - 5, y + 5, badgeWidth, 5, 1, 1, 'F');
+                    doc.setTextColor(31, 41, 55);
+                    doc.text(statusText, margin + contentWidth - badgeWidth - 3, y + 8.5);
+                }
+
+                y += cardHeight + 5;
+            });
+            
+            y += 5; // Space between rounds
+        });
+
+        // Footer
+        const pageCount = doc.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(156, 163, 175); // Gray-400
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: "right" });
+            doc.text(`Generated by Brainstorm AI`, margin, pageHeight - 10);
+        }
+
+        doc.save(`${session.topic_title?.replace(/\s+/g, '_') || 'session'}_report.pdf`);
     };
 
     const getInitials = (name: string) => {
@@ -249,9 +428,9 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
             </nav>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
+            <div id="report-content" className="max-w-7xl mx-auto px-6 py-8">
                 {/* Header */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+                <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
                     <div className="flex items-start justify-between mb-6">
                         <div>
                             <div className="text-sm text-gray-500 mb-2 flex items-center gap-2">
@@ -290,11 +469,11 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
                             </div>
                         </div>
                         <Button 
-                            onClick={handleExportReport}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                            onClick={() => router.push("/")}
+                            className="h-9 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 text-blue-700 border border-blue-200 px-6"
                         >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export Report
+                            Return to Home
+                            <CornerUpLeft className="h-4 w-4 ml-2" />
                         </Button>
                     </div>
 
@@ -358,27 +537,38 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
 
                 {/* View Controls */}
                 <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200">
-                        <button
-                            onClick={() => setViewMode("round")}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                viewMode === "round" 
-                                    ? "bg-gray-100 text-gray-900" 
-                                    : "text-gray-500 hover:text-gray-700"
-                            }`}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-white rounded-lg p-1 border border-gray-200">
+                            <button
+                                onClick={() => setViewMode("round")}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                    viewMode === "round" 
+                                        ? "bg-gray-100 text-gray-900" 
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                By Round
+                            </button>
+                            <button
+                                onClick={() => setViewMode("participant")}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                                    viewMode === "participant" 
+                                        ? "bg-gray-100 text-gray-900" 
+                                        : "text-gray-500 hover:text-gray-700"
+                                }`}
+                            >
+                                By Participant
+                            </button>
+                        </div>
+
+                        <Button
+                            id="export-button"
+                            onClick={handleExportReport}
+                            className="h-[42px] w-[42px] p-0 bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 rounded-lg shadow-sm"
+                            title="Export Report"
                         >
-                            By Round
-                        </button>
-                        <button
-                            onClick={() => setViewMode("participant")}
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                                viewMode === "participant" 
-                                    ? "bg-gray-100 text-gray-900" 
-                                    : "text-gray-500 hover:text-gray-700"
-                            }`}
-                        >
-                            By Participant
-                        </button>
+                            <Download className="h-5 w-5" />
+                        </Button>
                     </div>
 
                     <div className="flex items-center gap-4">
