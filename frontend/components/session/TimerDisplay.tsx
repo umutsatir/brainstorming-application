@@ -40,11 +40,11 @@ export function TimerDisplay({
     const isCritical = displaySeconds <= 30;
 
     const getTimerColor = () => {
-        if (timerState === TimerState.FINISHED) return "text-zinc-500";
-        if (timerState === TimerState.PAUSED) return "text-amber-400";
-        if (isCritical) return "text-red-500 animate-pulse";
-        if (isLowTime) return "text-amber-400";
-        return "text-emerald-400";
+        if (timerState === TimerState.FINISHED) return "text-gray-400";
+        if (timerState === TimerState.PAUSED) return "text-amber-600";
+        if (isCritical) return "text-red-600 animate-pulse";
+        if (isLowTime) return "text-amber-600";
+        return "text-blue-600";
     };
 
     const getStatusText = () => {
@@ -58,7 +58,7 @@ export function TimerDisplay({
 
     return (
         <div className="flex flex-col items-center">
-            <div className="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-2">
+            <div className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">
                 Time Remaining
             </div>
             <div
@@ -70,18 +70,18 @@ export function TimerDisplay({
                 <div
                     className={`mt-2 text-sm font-medium ${
                         timerState === TimerState.FINISHED
-                            ? "text-zinc-500"
+                            ? "text-gray-400"
                             : timerState === TimerState.PAUSED
-                            ? "text-amber-400"
-                            : "text-zinc-400"
+                            ? "text-amber-600"
+                            : "text-gray-500"
                     }`}
                 >
                     {statusText}
                 </div>
             )}
             {!isConnected && (
-                <div className="mt-2 flex items-center gap-2 text-amber-400">
-                    <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
+                <div className="mt-2 flex items-center gap-2 text-amber-600">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse" />
                     <span className="text-sm">Syncing...</span>
                 </div>
             )}
