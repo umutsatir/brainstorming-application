@@ -121,18 +121,21 @@ public class AIService {
                 .collect(Collectors.toList());
 
         if (ideaTexts.isEmpty()) {
-            throw new BadRequestException("Cannot generate summary for session with no ideas");
+            throw new BadRequestException("Cannot generate summary: No ideas found in this session. Please add ideas before generating a summary.");
         }
 
         try {
             // Call Gemini service
-            String summaryJson = geminiService.generateSummary(
+            String rawSummaryJson = geminiService.generateSummary(
                     session.getTopic().getTitle(),
                     session.getTopic().getDescription(),
                     ideaTexts,
                     request.getStyle(),
                     request.getLength(),
                     request.getLanguage());
+
+            // Clean JSON string
+            String summaryJson = cleanJsonString(rawSummaryJson);
 
             // Parse JSON response
             Map<String, Object> summaryData = parseSummaryResponse(summaryJson);
@@ -169,6 +172,31 @@ public class AIService {
         }
     }
 
+    public AISummaryResponse getLatestSummary(Long sessionId) {
+        List<AiArtifact> artifacts = aiArtifactRepository.findBySessionIdAndType(sessionId, AiArtifact.Type.SUMMARY);
+        
+        if (artifacts.isEmpty()) {
+            return null;
+        }
+        
+        // Get the most recent one (assuming ID is increasing)
+        AiArtifact latestArtifact = artifacts.get(artifacts.size() - 1);
+        
+        Map<String, Object> summaryData = parseSummaryResponse(latestArtifact.getContent());
+        
+        @SuppressWarnings("unchecked")
+        List<String> keyThemes = (List<String>) summaryData.getOrDefault("keyThemes", List.of());
+        @SuppressWarnings("unchecked")
+        List<String> notableIdeas = (List<String>) summaryData.getOrDefault("notableIdeas", List.of());
+
+        return AISummaryResponse.builder()
+                .summaryId(latestArtifact.getId())
+                .summaryText((String) summaryData.getOrDefault("summaryText", ""))
+                .keyThemes(keyThemes)
+                .notableIdeas(notableIdeas)
+                .build();
+    }
+
     private String buildSuggestionContent(List<String> suggestions) {
         try {
             Map<String, Object> content = new HashMap<>();
@@ -178,6 +206,20 @@ public class AIService {
             log.error("Error building suggestion content", e);
             return "{\"suggestions\": " + suggestions + "}";
         }
+    }
+
+    private String cleanJsonString(String jsonResponse) {
+        if (jsonResponse == null) return "{}";
+        String cleanJson = jsonResponse.trim();
+        if (cleanJson.startsWith("```json")) {
+            cleanJson = cleanJson.substring(7);
+        } else if (cleanJson.startsWith("```")) {
+            cleanJson = cleanJson.substring(3);
+        }
+        if (cleanJson.endsWith("```")) {
+            cleanJson = cleanJson.substring(0, cleanJson.length() - 3);
+        }
+        return cleanJson.trim();
     }
 
     private Map<String, Object> parseSummaryResponse(String jsonResponse) {
