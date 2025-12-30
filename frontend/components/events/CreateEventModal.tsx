@@ -31,8 +31,8 @@ export function CreateEventModal({ isOpen, onClose, onSuccess, initialData }: Cr
         setFormData({
             name: initialData.name || "",
             description: initialData.description || "",
-            startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : "",
-            endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : ""
+            startDate: initialData.start_date ? new Date(initialData.start_date).toISOString().split('T')[0] : "",
+            endDate: initialData.end_date ? new Date(initialData.end_date).toISOString().split('T')[0] : ""
         });
     } else {
         setFormData({ name: "", description: "", startDate: "", endDate: "" });
@@ -45,12 +45,20 @@ export function CreateEventModal({ isOpen, onClose, onSuccess, initialData }: Cr
     setError(null);
 
     try {
+      // Convert camelCase to snake_case for API
+      const payload = {
+        name: formData.name,
+        description: formData.description,
+        start_date: formData.startDate,
+        end_date: formData.endDate
+      };
+
       if (initialData?.id) {
           // Edit Mode
-          await api.patch(`/events/${initialData.id}`, formData);
+          await api.patch(`/events/${initialData.id}`, payload);
       } else {
           // Create Mode
-          await api.post("/events", formData);
+          await api.post("/events", payload);
       }
       onSuccess();
       onClose();
