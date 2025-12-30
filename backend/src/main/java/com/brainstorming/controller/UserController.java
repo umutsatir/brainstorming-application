@@ -26,13 +26,21 @@ public class UserController {
     /**
      * GET /users - Get paginated list of all users.
      * Supports search by name or email.
+     * If eventId is provided, excludes users already in teams for that event.
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER')")
     public ResponseEntity<Page<UserDto>> getAllUsers(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) Long eventId) {
+
+        // If eventId is provided, exclude users already in teams for that event
+        if (eventId != null) {
+            return ResponseEntity.ok(userService.getAllUsersExcludingEventTeamMembers(search, page, size, eventId));
+        }
+
         return ResponseEntity.ok(userService.getAllUsers(search, page, size));
     }
     
