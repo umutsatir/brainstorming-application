@@ -1,0 +1,173 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class AiArtifact {
+   content: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   round: Round
+   type: Type
+   id: Long
+   session: Session
+}
+class Event {
+   name: String
+   description: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   startDate: LocalDate
+   id: Long
+   topics: List<Topic>
+   endDate: LocalDate
+   owner: User
+   teams: List<Team>
+   participants: List<EventParticipant>
+}
+class EventParticipant {
+   createdAt: LocalDateTime
+   event: Event
+   id: Long
+   roleOverride: Role
+   user: User
+}
+class Idea {
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   round: Round
+   id: Long
+   session: Session
+   text: String
+   team: Team
+   passedFromUser: User
+   author: User
+}
+class Notification {
+   deviceType: String
+   createdAt: LocalDateTime
+   deviceToken: String
+   id: Long
+   user: User
+}
+class RealtimeToken {
+   createdAt: LocalDateTime
+   token: String
+   id: Long
+   expiresAt: LocalDateTime
+   user: User
+}
+class ReportCache {
+   session: Session
+   filePath: String
+   createdAt: LocalDateTime
+   format: Format
+   id: Long
+}
+class Round {
+   endTime: LocalDateTime
+   createdAt: LocalDateTime
+   timerState: TimerState
+   ideas: List<Idea>
+   id: Long
+   startTime: LocalDateTime
+   session: Session
+   roundNumber: Integer
+}
+class Session {
+   roundCount: Integer
+   rounds: List<Round>
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   currentRound: Integer
+   ideas: List<Idea>
+   id: Long
+   logs: List<SessionLog>
+   topic: Topic
+   team: Team
+   status: Status
+   aiArtifacts: List<AiArtifact>
+}
+class SessionLog {
+   session: Session
+   payload: String
+   createdAt: LocalDateTime
+   id: Long
+   actionType: String
+   user: User
+}
+class Team {
+   name: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   id: Long
+   leader: User
+   focus: String
+   members: List<TeamMember>
+   event: Event
+   sessions: List<Session>
+   capacity: Integer
+}
+class TeamMember {
+   team: Team
+   createdAt: LocalDateTime
+   id: Long
+   user: User
+}
+class Topic {
+   description: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   title: String
+   id: Long
+   event: Event
+   status: Status
+   sessions: List<Session>
+}
+class User {
+   passwordHash: String
+   role: Role
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   id: Long
+   email: String
+   phone: String
+   fullName: String
+   status: Status
+}
+
+AiArtifact       "1" *-[#595959,plain]-> "round\n1" Round            
+AiArtifact       "1" *-[#595959,plain]-> "session\n1" Session          
+Event            "1" *-[#595959,plain]-> "participants\n*" EventParticipant 
+Event            "1" *-[#595959,plain]-> "teams\n*" Team             
+Event            "1" *-[#595959,plain]-> "topics\n*" Topic            
+Event            "1" *-[#595959,plain]-> "owner\n1" User             
+EventParticipant "1" *-[#595959,plain]-> "event\n1" Event            
+EventParticipant "1" *-[#595959,plain]-> "user\n1" User             
+Idea             "1" *-[#595959,plain]-> "round\n1" Round            
+Idea             "1" *-[#595959,plain]-> "session\n1" Session          
+Idea             "1" *-[#595959,plain]-> "team\n1" Team             
+Idea             "1" *-[#595959,plain]-> "author\n1" User             
+Notification     "1" *-[#595959,plain]-> "user\n1" User             
+RealtimeToken    "1" *-[#595959,plain]-> "user\n1" User             
+ReportCache      "1" *-[#595959,plain]-> "session\n1" Session          
+Round            "1" *-[#595959,plain]-> "ideas\n*" Idea             
+Round            "1" *-[#595959,plain]-> "session\n1" Session          
+Session          "1" *-[#595959,plain]-> "aiArtifacts\n*" AiArtifact       
+Session          "1" *-[#595959,plain]-> "ideas\n*" Idea             
+Session          "1" *-[#595959,plain]-> "rounds\n*" Round            
+Session          "1" *-[#595959,plain]-> "logs\n*" SessionLog       
+Session          "1" *-[#595959,plain]-> "team\n1" Team             
+Session          "1" *-[#595959,plain]-> "topic\n1" Topic            
+SessionLog       "1" *-[#595959,plain]-> "session\n1" Session          
+SessionLog       "1" *-[#595959,plain]-> "user\n1" User             
+Team             "1" *-[#595959,plain]-> "event\n1" Event            
+Team             "1" *-[#595959,plain]-> "sessions\n*" Session          
+Team             "1" *-[#595959,plain]-> "members\n*" TeamMember       
+Team             "1" *-[#595959,plain]-> "leader\n1" User             
+TeamMember       "1" *-[#595959,plain]-> "team\n1" Team             
+TeamMember       "1" *-[#595959,plain]-> "user\n1" User             
+Topic            "1" *-[#595959,plain]-> "event\n1" Event            
+Topic            "1" *-[#595959,plain]-> "sessions\n*" Session          
+@enduml

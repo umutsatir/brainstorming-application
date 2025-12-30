@@ -1,0 +1,408 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class AIService
+class AISuggestionRequest {
+   promptOverride: String
+   roundNumber: Integer
+}
+class AISuggestionResponse {
+   suggestions: List<Suggestion>
+}
+class AISummaryRequest {
+   length: String
+   style: String
+   language: String
+}
+class AISummaryResponse {
+   summaryText: String
+   notableIdeas: List<String>
+   summaryId: Long
+   keyThemes: List<String>
+}
+class AddParticipantRequest {
+   eventId: Long
+   userId: Long
+   roleOverride: String
+}
+class AdvanceRoundResponseDto {
+   passedIdeaMap: Map<Long, List<IdeaDto>>
+   previousRoundStatus: String
+   currentRound: Integer
+}
+class ApiError {
+   validationErrors: Map<String, String>
+   timestamp: LocalDateTime
+   message: String
+   error: String
+   status: int
+}
+class AuthResponse {
+   user: UserDto
+   token: String
+}
+class AuthService
+class CreateEventRequest {
+   name: String
+   description: String
+   endDate: LocalDate
+   startDate: LocalDate
+}
+class CreateIdeaRequest {
+   text: String
+   sessionId: Long
+   roundId: Long
+   passedFromUserId: Long
+}
+class CreateParticipantRequest {
+   eventId: Long
+   fullName: String
+   email: String
+   phone: String
+   role: String
+}
+class CreateSessionRequest {
+   roundCount: Integer
+   topicId: Long
+   teamId: Long
+}
+class CreateTeamRequest {
+   eventId: Long
+   name: String
+   focus: String
+   capacity: Integer
+}
+class CreateTopicRequest {
+   description: String
+   title: String
+}
+class EventDto {
+   name: String
+   description: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   startDate: LocalDate
+   id: Long
+   endDate: LocalDate
+   ownerName: String
+   ownerId: Long
+}
+class EventParticipantDto {
+   eventId: Long
+   createdAt: LocalDateTime
+   eventName: String
+   userEmail: String
+   id: Long
+   userName: String
+   userId: Long
+   roleOverride: Role
+}
+class EventReportDto {
+   totalParticipants: Integer
+   eventName: String
+   startDate: LocalDate
+   topics: List<TopicDto>
+   ownerName: String
+   totalTopics: Integer
+   eventId: Long
+   totalSessions: Integer
+   eventDescription: String
+   totalIdeas: Integer
+   endDate: LocalDate
+   teams: List<TeamSummaryDto>
+   totalTeams: Integer
+}
+class EventService {
+   allEvents: List<EventDto>
+}
+class GeminiService
+class IdeaDto {
+   authorId: Long
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   roundId: Long
+   passedFromUserId: Long
+   id: Long
+   passedFromUserName: String
+   text: String
+   sessionId: Long
+   roundNumber: Integer
+   teamId: Long
+   authorName: String
+}
+class IdeaService {
+   allIdeas: List<IdeaDto>
+}
+class JwtService {
+   signInKey: SecretKey
+}
+class LoginRequest {
+   email: String
+   password: String
+}
+class ParticipantResponse {
+   eventId: Long
+   status: String
+   fullName: String
+   id: Long
+   role: String
+}
+class RegisterRequest {
+   password: String
+   fullName: String
+   email: String
+   phone: String
+}
+class ReportDto {
+   teamName: String
+   createdAt: LocalDateTime
+   format: Format
+   id: Long
+   filePath: String
+   sessionTopicTitle: String
+   sessionId: Long
+}
+class RoundDetailDto {
+   endTime: LocalDateTime
+   createdAt: LocalDateTime
+   timerState: TimerState
+   timerRemainingSeconds: Integer
+   id: Long
+   totalMembers: Integer
+   submittedCount: Integer
+   startTime: LocalDateTime
+   memberSubmissions: List<MemberSubmissionStatusDto>
+   sessionId: Long
+   roundNumber: Integer
+}
+class RoundDto {
+   endTime: LocalDateTime
+   createdAt: LocalDateTime
+   timerState: TimerState
+   id: Long
+   startTime: LocalDateTime
+   sessionId: Long
+   roundNumber: Integer
+}
+class RoundIdeasResponseDto {
+   submissionStatus: SubmissionStatusDto
+   roundNumber: Integer
+   previousTeammateIdeas: List<IdeaDto>
+   yourIdeas: List<IdeaDto>
+}
+class RoundReportDto {
+   timerState: String
+   endTime: LocalDateTime
+   roundNumber: Integer
+   ideas: List<IdeaDto>
+   ideaCount: Integer
+   startTime: LocalDateTime
+}
+class SessionControlRequest {
+   action: String
+}
+class SessionDto {
+   teamName: String
+   roundCount: Integer
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   currentRound: Integer
+   id: Long
+   topicTitle: String
+   topicId: Long
+   teamId: Long
+   status: Status
+}
+class SessionIdeasResponseDto {
+   totalIdeas: Integer
+   totalRounds: Integer
+   sessionId: Long
+   ideasByRound: Map<Integer, List<RoundParticipantIdeasDto>>
+}
+class SessionLogDto {
+   createdAt: LocalDateTime
+   id: Long
+   userName: String
+   actionType: String
+   userId: Long
+   payload: String
+   sessionId: Long
+}
+class SessionReportDto {
+   teamName: String
+   roundCount: Integer
+   rounds: List<RoundReportDto>
+   createdAt: LocalDateTime
+   currentRound: Integer
+   topicTitle: String
+   totalIdeas: Integer
+   status: String
+   sessionId: Long
+   topicDescription: String
+}
+class SessionService {
+   allSessions: List<SessionDto>
+}
+class SessionStateDto {
+   previousIdeas: List<IdeaDto>
+   timerRemainingSeconds: Integer
+   isRoundLocked: Boolean
+   teamSubmissions: List<TeamMemberSubmissionDto>
+   myIdeas: List<IdeaDto>
+   currentRound: RoundDto
+   session: SessionDto
+   userRole: String
+   canSubmit: Boolean
+}
+class SessionTimerService
+class SubmitIdeasRequest {
+   ideas: List<String>
+}
+class SubmitIdeasResponse {
+   message: String
+   ideas: List<IdeaDto>
+}
+class TeamDto {
+   eventId: Long
+   name: String
+   memberCount: Integer
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   leaderName: String
+   id: Long
+   leaderId: Long
+   focus: String
+   capacity: Integer
+}
+class TeamMemberDto {
+   userId: Long
+   createdAt: LocalDateTime
+   userEmail: String
+   id: Long
+   userName: String
+   teamId: Long
+}
+class TeamMemberResponseDto {
+   isTeamLeader: boolean
+   fullName: String
+   id: Long
+   email: String
+   status: Status
+   role: String
+}
+class TeamMemberSubmissionDto {
+   userId: Long
+   submitted: Boolean
+   userName: String
+   submittedAt: LocalDateTime
+}
+class TeamService {
+   allTeams: List<TeamDto>
+}
+class TeamSummaryDto {
+   name: String
+   totalIdeas: Integer
+   memberCount: Integer
+   leaderName: String
+   id: Long
+   sessionCount: Integer
+}
+class TopicDto {
+   eventId: Long
+   description: String
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   title: String
+   id: Long
+   status: Status
+   authorName: String
+}
+class TopicService {
+   allTopics: List<TopicDto>
+}
+class UpdateIdeaRequest {
+   text: String
+}
+class UpdateParticipantRequest {
+   status: String
+   fullName: String
+   phone: String
+   role: String
+}
+class UpdateTopicRequest {
+   description: String
+   status: Status
+   title: String
+}
+class UserDto {
+   role: Role
+   updatedAt: LocalDateTime
+   createdAt: LocalDateTime
+   id: Long
+   email: String
+   phone: String
+   fullName: String
+   status: Status
+}
+class UserService
+
+AIService                 -[#595959,dashed]->  AIService                
+AIService                 -[#595959,dashed]->  AISuggestionRequest      
+AIService                 -[#595959,dashed]->  AISuggestionResponse     
+AIService                 -[#595959,dashed]->  AISummaryRequest         
+AIService                 -[#595959,dashed]->  AISummaryResponse        
+AIService                "1" *-[#595959,plain]-> "geminiService\n1" GeminiService            
+AdvanceRoundResponseDto   -[#595959,dashed]->  IdeaDto                  
+AuthResponse             "1" *-[#595959,plain]-> "user\n1" UserDto                  
+AuthService               -[#595959,dashed]->  AuthResponse             
+AuthService               -[#595959,dashed]->  AuthService              
+AuthService              "1" *-[#595959,plain]-> "jwtService\n1" JwtService               
+AuthService               -[#595959,dashed]->  LoginRequest             
+AuthService               -[#595959,dashed]->  RegisterRequest          
+AuthService               -[#595959,dashed]->  UserDto                  
+EventReportDto           "1" *-[#595959,plain]-> "teams\n*" TeamSummaryDto           
+EventReportDto           "1" *-[#595959,plain]-> "topics\n*" TopicDto                 
+EventService              -[#595959,dashed]->  CreateEventRequest       
+EventService              -[#595959,dashed]->  EventDto                 
+EventService              -[#595959,dashed]->  TeamDto                  
+GeminiService             -[#595959,dashed]->  GeminiService            
+IdeaService               -[#595959,dashed]->  CreateIdeaRequest        
+IdeaService               -[#595959,dashed]->  IdeaDto                  
+IdeaService               -[#595959,dashed]->  IdeaService              
+IdeaService               -[#595959,dashed]->  RoundIdeasResponseDto    
+IdeaService               -[#595959,dashed]->  SubmitIdeasRequest       
+IdeaService               -[#595959,dashed]->  SubmitIdeasResponse      
+IdeaService               -[#595959,dashed]->  UpdateIdeaRequest        
+JwtService                -[#595959,dashed]->  JwtService               
+RoundIdeasResponseDto    "1" *-[#595959,plain]-> "previousTeammateIdeas\n*" IdeaDto                  
+RoundReportDto           "1" *-[#595959,plain]-> "ideas\n*" IdeaDto                  
+SessionReportDto         "1" *-[#595959,plain]-> "rounds\n*" RoundReportDto           
+SessionService            -[#595959,dashed]->  AdvanceRoundResponseDto  
+SessionService            -[#595959,dashed]->  CreateSessionRequest     
+SessionService            -[#595959,dashed]->  IdeaDto                  
+SessionService            -[#595959,dashed]->  RoundDetailDto           
+SessionService            -[#595959,dashed]->  RoundDto                 
+SessionService            -[#595959,dashed]->  SessionDto               
+SessionService            -[#595959,dashed]->  SessionIdeasResponseDto  
+SessionService            -[#595959,dashed]->  SessionService           
+SessionService            -[#595959,dashed]->  SessionStateDto          
+SessionService            -[#595959,dashed]->  TeamMemberSubmissionDto  
+SessionStateDto          "1" *-[#595959,plain]-> "previousIdeas\n*" IdeaDto                  
+SessionStateDto          "1" *-[#595959,plain]-> "currentRound\n1" RoundDto                 
+SessionStateDto          "1" *-[#595959,plain]-> "session\n1" SessionDto               
+SessionStateDto          "1" *-[#595959,plain]-> "teamSubmissions\n*" TeamMemberSubmissionDto  
+SessionTimerService      "1" *-[#595959,plain]-> "sessionService\n1" SessionService           
+SessionTimerService       -[#595959,dashed]->  SessionTimerService      
+SubmitIdeasResponse      "1" *-[#595959,plain]-> "ideas\n*" IdeaDto                  
+TeamService               -[#595959,dashed]->  CreateTeamRequest        
+TeamService               -[#595959,dashed]->  TeamDto                  
+TeamService               -[#595959,dashed]->  TeamMemberResponseDto    
+TeamService               -[#595959,dashed]->  TeamService              
+TopicService              -[#595959,dashed]->  CreateTopicRequest       
+TopicService              -[#595959,dashed]->  TopicDto                 
+TopicService              -[#595959,dashed]->  UpdateTopicRequest       
+UserService               -[#595959,dashed]->  UserDto                  : "«create»"
+@enduml

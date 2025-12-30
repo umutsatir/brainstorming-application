@@ -1,0 +1,102 @@
+@startuml
+
+!theme plain
+top to bottom direction
+skinparam linetype ortho
+
+class AIController {
+  + generateSuggestions(Long, AISuggestionRequest): ResponseEntity<AISuggestionResponse>
+  + getSummary(Long): ResponseEntity<AISummaryResponse>
+  + generateSummary(Long, AISummaryRequest): ResponseEntity<AISummaryResponse>
+}
+class AuditController {
+  + getSessionAuditLogs(Long): ResponseEntity<List<SessionLogDto>>
+}
+class AuthController {
+  + register(RegisterRequest): ResponseEntity<AuthResponse>
+  + login(LoginRequest): ResponseEntity<AuthResponse>
+   profile: ResponseEntity<UserDto>
+}
+class EventController {
+  + getEventTeams(Long): ResponseEntity<List<TeamDto>>
+  + getEventById(Long): ResponseEntity<EventDto>
+  + getTopicsByEvent(Long): ResponseEntity<List<TopicDto>>
+  + createEvent(CreateEventRequest, User): ResponseEntity<EventDto>
+  + getAllEvents(Principal): ResponseEntity<List<EventDto>>
+  + deleteEvent(Long): ResponseEntity<Void>
+  + updateEvent(Long, CreateEventRequest): ResponseEntity<EventDto>
+  + createTeam(Long, CreateTeamRequest, Principal): ResponseEntity<TeamDto>
+  + createTopic(Long, CreateTopicRequest): ResponseEntity<TopicDto>
+}
+class IdeaController {
+  + createIdea(CreateIdeaRequest): ResponseEntity<IdeaDto>
+  + deleteIdea(Long): ResponseEntity<Void>
+  + updateIdea(Long, UpdateIdeaRequest): ResponseEntity<IdeaDto>
+  + updateIdeaPut(Long, UpdateIdeaRequest): ResponseEntity<IdeaDto>
+  + getPreviousIdeas(Long, Integer): ResponseEntity<List<IdeaDto>>
+  + submitIdeas(Long, Integer, SubmitIdeasRequest): ResponseEntity<SubmitIdeasResponse>
+  + getRoundIdeasForUser(Long, Integer): ResponseEntity<RoundIdeasResponseDto>
+  + getIdeaById(Long): ResponseEntity<IdeaDto>
+   allIdeas: ResponseEntity<List<IdeaDto>>
+   currentUser: User
+}
+class ParticipantController {
+  + getParticipants(Long, Long, String, int, int): ResponseEntity<List<EventParticipantDto>>
+  + getParticipant(Long): ResponseEntity<EventParticipantDto>
+  + deleteParticipant(Long): ResponseEntity<Void>
+  + updateParticipant(Long, UpdateParticipantRequest): ResponseEntity<EventParticipantDto>
+  + createParticipant(CreateParticipantRequest): ResponseEntity<ParticipantResponse>
+}
+class ReportController {
+  + getSessionReport(Long): ResponseEntity<SessionReportDto>
+  + exportSessionReport(Long, String): ResponseEntity<Resource>
+  + getEventReport(Long): ResponseEntity<EventReportDto>
+}
+class SessionController {
+  + getSessionState(Long): ResponseEntity<SessionStateDto>
+  + getSessionIdeas(Long): ResponseEntity<SessionIdeasResponseDto>
+  + getRoundDetail(Long, Integer): ResponseEntity<RoundDetailDto>
+  + pauseSession(Long): ResponseEntity<SessionStateDto>
+  + createSession(CreateSessionRequest): ResponseEntity<SessionDto>
+  + resumeSession(Long): ResponseEntity<SessionStateDto>
+  + completeSession(Long): ResponseEntity<SessionStateDto>
+  + getSessionById(Long): ResponseEntity<SessionDto>
+  + getSessionRounds(Long): ResponseEntity<List<RoundDto>>
+  + controlSession(Long, SessionControlRequest): ResponseEntity<SessionStateDto>
+  + controlSessionPost(Long, SessionControlRequest): ResponseEntity<SessionStateDto>
+  + advanceRound(Long, Integer): ResponseEntity<AdvanceRoundResponseDto>
+  + startSession(Long): ResponseEntity<SessionStateDto>
+   currentUser: User
+   allSessions: ResponseEntity<List<SessionDto>>
+}
+class TeamController {
+  + addTeamMembers(Long, List<Long>): ResponseEntity<Void>
+  + getTeamById(Long): ResponseEntity<TeamDto>
+  + deleteTeam(Long): ResponseEntity<Void>
+  + removeTeamMember(Long, Long): ResponseEntity<Void>
+  + getTeamMembers(Long): ResponseEntity<List<TeamMemberResponseDto>>
+  + promoteToLeader(Long, Long): ResponseEntity<TeamDto>
+  + updateTeam(Long, CreateTeamRequest): ResponseEntity<TeamDto>
+  + createSessionForTeam(Long, CreateSessionRequest): ResponseEntity<SessionDto>
+  + getTeamSessions(Long, String): ResponseEntity<List<SessionDto>>
+   myTeams: ResponseEntity<List<TeamDto>>
+   currentUser: User
+   allTeams: ResponseEntity<List<TeamDto>>
+}
+class TopicController {
+  + getTopicById(Long): ResponseEntity<TopicDto>
+  + updateTopic(Long, UpdateTopicRequest): ResponseEntity<TopicDto>
+  + deleteTopic(Long): ResponseEntity<Void>
+   allTopics: ResponseEntity<List<TopicDto>>
+}
+class UserController {
+  + getUserById(Long): ResponseEntity<UserDto>
+  + getAllUsers(String, int, int, Long): ResponseEntity<Page<UserDto>>
+  + updateUser(Long, UserDto): ResponseEntity<UserDto>
+  + deleteUser(Long): ResponseEntity<Void>
+}
+
+IdeaController         -[#595959,dashed]->  IdeaController        
+SessionController      -[#595959,dashed]->  SessionController     
+TeamController         -[#595959,dashed]->  TeamController        
+@enduml
