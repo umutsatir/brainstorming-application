@@ -162,11 +162,12 @@ public class GeminiService {
             prompt.append("Language: ").append(language).append(". ");
         }
 
-        prompt.append("\n\nFormat your response as JSON with the following structure:\n");
+        prompt.append("\n\nIMPORTANT: Return ONLY the raw JSON. Do not use Markdown code blocks (```json). Do not include any text outside the JSON object.\n");
+        prompt.append("The JSON must follow this exact structure:\n");
         prompt.append("{\n");
-        prompt.append("  \"summaryText\": \"...\",\n");
-        prompt.append("  \"keyThemes\": [\"theme1\", \"theme2\", ...],\n");
-        prompt.append("  \"notableIdeas\": [\"idea1\", \"idea2\", ...]\n");
+        prompt.append("  \"summaryText\": \"A cohesive paragraph summarizing the main points of the brainstorming session. Focus on the collective intelligence and direction.\",\n");
+        prompt.append("  \"keyThemes\": [\"List of 3-5 major recurring themes or categories found in the ideas\"],\n");
+        prompt.append("  \"notableIdeas\": [\"List of 3-5 specific, high-potential, or unique ideas that stood out\"]\n");
         prompt.append("}");
 
         return prompt.toString();

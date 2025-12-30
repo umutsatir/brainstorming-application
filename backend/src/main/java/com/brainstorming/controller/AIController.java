@@ -55,5 +55,20 @@ public class AIController {
         AISummaryResponse response = aiService.generateSummary(sessionId, request);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 8.3 GET /ai/sessions/{sessionId}/summary
+     * Get the latest generated summary for a session
+     * Roles: EVENT_MANAGER, TEAM_LEADER, TEAM_MEMBER
+     */
+    @GetMapping("/{sessionId}/summary")
+    @PreAuthorize("hasAnyRole('EVENT_MANAGER', 'TEAM_LEADER', 'TEAM_MEMBER')")
+    public ResponseEntity<AISummaryResponse> getSummary(@PathVariable Long sessionId) {
+        AISummaryResponse response = aiService.getLatestSummary(sessionId);
+        if (response == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(response);
+    }
 }
 

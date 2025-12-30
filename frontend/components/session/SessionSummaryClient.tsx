@@ -70,15 +70,49 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
     const [viewMode, setViewMode] = useState<"round" | "participant">("round");
     const [displayMode, setDisplayMode] = useState<"grid" | "list">("grid");
 
-    // AI Summary (mock data for now - can be integrated with AI service later)
-    const [aiSummary] = useState({
-        text: "The team focused heavily on social media engagement, with a strong preference for short-form video content. A recurring theme was leveraging micro-influencers to boost organic reach without significantly increasing ad spend. There was also consensus on needing a consolidated dashboard for tracking metrics across platforms.",
-        tags: ["#ViralMarketing", "#BudgetOptimization", "#Influencers", "#VideoContent"]
-    });
+    // AI Summary
+    const [aiSummary, setAiSummary] = useState<{
+        text: string;
+        tags: string[];
+    } | null>(null);
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
     useEffect(() => {
         fetchSessionData();
+        fetchAiSummary();
     }, [sessionId]);
+
+    const fetchAiSummary = async () => {
+        try {
+            const response = await api.get(`/ai/sessions/${sessionId}/summary`);
+            if (response.data) {
+                setAiSummary({
+                    text: response.data.summary_text,
+                    tags: response.data.key_themes || []
+                });
+            }
+        } catch (error) {
+            // Ignore 404 (not found) or other errors, just don't show summary
+            console.log("No existing summary found or failed to fetch");
+        }
+    };
+
+    const handleGenerateSummary = async () => {
+        setIsGeneratingSummary(true);
+        try {
+            const response = await api.post(`/ai/sessions/${sessionId}/summary`, {});
+            setAiSummary({
+                text: response.data.summary_text,
+                tags: response.data.key_themes || []
+            });
+        } catch (error: any) {
+            console.error("Failed to generate summary", error);
+            const errorMessage = error.response?.data?.message || "Failed to generate AI summary. Please try again later.";
+            alert(errorMessage);
+        } finally {
+            setIsGeneratingSummary(false);
+        }
+    };
 
     const fetchSessionData = async () => {
         try {
@@ -272,21 +306,50 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
                                     <Sparkles className="h-5 w-5" />
                                     AI Session Summary
                                 </div>
-                                <p className="text-gray-700 leading-relaxed mb-4">
-                                    {aiSummary.text}
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    {aiSummary.tags.map((tag, i) => (
-                                        <span 
-                                            key={i}
-                                            className="px-3 py-1 bg-white rounded-full text-sm font-medium text-blue-600 border border-blue-200"
+                                
+                                {aiSummary ? (
+                                    <>
+                                        <p className="text-gray-700 leading-relaxed mb-4">
+                                            {aiSummary.text}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {aiSummary.tags.map((tag, i) => (
+                                                <span 
+                                                    key={i}
+                                                    className="px-3 py-1 bg-white rounded-full text-sm font-medium text-blue-600 border border-blue-200"
+                                                >
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col items-start gap-3">
+                                        <p className="text-gray-600 text-sm">
+                                            Generate an AI-powered summary of this session to identify key themes and insights.
+                                        </p>
+                                        <Button 
+                                            onClick={handleGenerateSummary}
+                                            disabled={isGeneratingSummary}
+                                            className="bg-white text-blue-600 border border-blue-200 hover:bg-blue-50"
+                                            size="sm"
                                         >
-                                            {tag}
-                                        </span>
-                                    ))}
-                                </div>
+                                            {isGeneratingSummary ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="h-4 w-4 mr-2" />
+                                                    Generate Summary
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
-                            <div className="text-blue-200">
+                            <div className="text-blue-200 hidden sm:block">
                                 <Sparkles className="h-16 w-16" />
                             </div>
                         </div>
@@ -369,12 +432,26 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
                                         ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
                                         : "grid-cols-1"
                                 }`}>
-                                    {round.ideas.map((idea) => (
-                                        <IdeaCard 
-                                            key={idea.id} 
-                                            idea={idea} 
-                                            getInitials={getInitials}
+                                    {Object.values(round.ideas.reduce((acc, idea) => {
+                                        if (!acc[idea.author_id]) {
+                                            acc[idea.author_id] = {
+                                                author: {
+                                                    id: idea.author_id,
+                                                    name: idea.author_name
+                                                },
+                                                ideas: []
+                                            };
+                                        }
+                                        acc[idea.author_id].ideas.push(idea);
+                                        return acc;
+                                    }, {} as Record<number, { author: { id: number, name: string }, ideas: typeof round.ideas }>)).map((userGroup) => (
+                                        <GroupedIdeasCard 
+                                            key={userGroup.author.id}
+                                            title={userGroup.author.name}
+                                            ideas={userGroup.ideas}
+                                            initials={getInitials(userGroup.author.name)}
                                             getStatusColor={getStatusColor}
+                                            variant="user"
                                         />
                                     ))}
                                 </div>
@@ -385,42 +462,51 @@ export function SessionSummaryClient({ sessionId, token, currentUserId }: Sessio
 
                 {/* Ideas by Participant */}
                 {viewMode === "participant" && (
-                    <div className="space-y-8">
+                    <div className="space-y-16">
                         {participants.map((participant) => {
-                            const participantIdeas = ideasByRound.flatMap(round => 
-                                round.ideas.filter(idea => idea.author_id === participant.id)
-                            );
+                            // Group ideas by round for this participant
+                            const userRounds = ideasByRound.map(round => ({
+                                ...round,
+                                ideas: round.ideas.filter(idea => idea.author_id === participant.id)
+                            })).filter(round => round.ideas.length > 0);
 
-                            if (participantIdeas.length === 0) return null;
+                            if (userRounds.length === 0) return null;
+
+                            const totalIdeas = userRounds.reduce((acc, r) => acc + r.ideas.length, 0);
 
                             return (
                                 <div key={participant.id}>
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium">
+                                    <div className="flex items-center gap-4 mb-6 border-b border-gray-100 pb-4">
+                                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-md">
                                             {getInitials(participant.name)}
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-bold text-gray-900">
+                                            <h2 className="text-2xl font-bold text-gray-900">
                                                 {participant.name}
                                             </h2>
-                                            <span className="text-sm text-gray-500">
-                                                {participantIdeas.length} Ideas
-                                            </span>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                                                <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                                                    {totalIdeas} Ideas
+                                                </span>
+                                                <span>•</span>
+                                                <span>{userRounds.length} Rounds Active</span>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    <div className={`grid gap-4 ${
+                                    <div className={`grid gap-6 ${
                                         displayMode === "grid" 
                                             ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
                                             : "grid-cols-1"
                                     }`}>
-                                        {participantIdeas.map((idea) => (
-                                            <IdeaCard 
-                                                key={idea.id} 
-                                                idea={idea} 
-                                                getInitials={getInitials}
+                                        {userRounds.map(round => (
+                                            <GroupedIdeasCard 
+                                                key={round.round_number}
+                                                title={round.round_title || `Round ${round.round_number}`}
+                                                ideas={round.ideas}
+                                                initials={`R${round.round_number}`}
                                                 getStatusColor={getStatusColor}
-                                                showRound
+                                                variant="round"
                                             />
                                         ))}
                                     </div>
@@ -449,42 +535,82 @@ interface IdeaCardProps {
 
 function IdeaCard({ idea, getInitials, getStatusColor, showRound }: IdeaCardProps) {
     return (
-        <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-            <div className="flex items-center gap-3 mb-3">
-                <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-sm font-medium">
+        <div className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 flex items-center justify-center text-blue-600 text-sm font-bold shadow-sm">
                     {getInitials(idea.author_name)}
                 </div>
-                <span className="text-sm font-medium text-gray-700">{idea.author_name}</span>
-                {idea.votes !== undefined && idea.votes > 0 && (
-                    <div className="ml-auto flex items-center gap-1 text-blue-600">
-                        <ThumbsUp className="h-4 w-4" />
-                        <span className="text-sm font-medium">{idea.votes}</span>
-                    </div>
-                )}
-            </div>
-
-            <p className="text-gray-800 mb-4 leading-relaxed">{idea.text}</p>
-
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 text-sm text-gray-500">
-                    {idea.comments_count !== undefined && idea.comments_count > 0 && (
-                        <div className="flex items-center gap-1">
-                            <MessageSquare className="h-4 w-4" />
-                            <span>{idea.comments_count} comments</span>
-                        </div>
-                    )}
+                <div>
+                    <h3 className="text-sm font-bold text-gray-900">{idea.author_name}</h3>
                     {showRound && (
-                        <span className="text-blue-600 text-xs font-medium">
+                        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-0.5 inline-block">
                             Round {idea.round_number}
                         </span>
                     )}
                 </div>
+            </div>
 
+            <p className="text-gray-700 leading-relaxed mb-4">{idea.text}</p>
+
+            <div className="flex items-center justify-end">
                 {idea.status && (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(idea.status)}`}>
-                        {idea.status.charAt(0).toUpperCase() + idea.status.slice(1)}
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold tracking-wide uppercase ${getStatusColor(idea.status)} bg-opacity-10 border border-opacity-20`}>
+                        {idea.status}
                     </span>
                 )}
+            </div>
+        </div>
+    );
+}
+
+interface GroupedIdeasCardProps {
+    title: string;
+    ideas: IdeaData[];
+    initials: string;
+    getStatusColor: (status: string | null | undefined) => string;
+    variant?: 'user' | 'round';
+}
+
+function GroupedIdeasCard({ title, ideas, initials, getStatusColor, variant = 'user' }: GroupedIdeasCardProps) {
+    const isRound = variant === 'round';
+    
+    return (
+        <div className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)] transition-all duration-300 h-full flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+                <div className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm border ${
+                    isRound 
+                        ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100 text-amber-600" 
+                        : "bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 text-blue-600"
+                }`}>
+                    {initials}
+                </div>
+                <div>
+                    <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+                    <span className="text-xs text-gray-500 font-medium">{ideas.length} ideas contributed</span>
+                </div>
+            </div>
+
+            <div className="space-y-3 flex-1">
+                {ideas.map((idea) => (
+                    <div key={idea.id} className={`group/idea relative pl-4 border-l-2 transition-colors py-1 ${
+                        isRound 
+                            ? "border-gray-100 hover:border-amber-400" 
+                            : "border-gray-100 hover:border-blue-400"
+                    }`}>
+                        <p className="text-gray-700 text-sm leading-relaxed mb-2">{idea.text}</p>
+                        
+                        <div className="flex items-center justify-between min-h-[20px]">
+                             <div className="flex items-center gap-2">
+                                {/* No extra badges needed here as context is clear */}
+                             </div>
+                            {idea.status && (
+                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-semibold tracking-wide uppercase ${getStatusColor(idea.status)} bg-opacity-10 border border-opacity-20`}>
+                                    {idea.status}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
