@@ -1,49 +1,86 @@
 import '../enums/user_role.dart';
 
 class AppUser {
-  final int id;
-  final String name;        // fullName backend'den geliyor, biz name'e mapliyoruz
-  final String email;
-  final String? phone;
+  final String id;
+  final String name; // fullName
+  final String? email;
   final UserRole role;
-  final String status;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final String? status;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-  AppUser({
+  const AppUser({
     required this.id,
     required this.name,
-    required this.email,
-    this.phone,
     required this.role,
-    required this.status,
-    required this.createdAt,
-    required this.updatedAt,
+    this.email,
+    this.status,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
-      id: json['id'] as int,
-      name: json['fullName'] as String,
-      email: json['email'] as String,
-      phone: json['phone'] as String?,
-      role: userRoleFromApi(json['role'] as String),
-      status: json['status'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      id: json['id']?.toString() ?? '',
+      // Auth endpointlerinde fullName geçiyor
+      name: json['fullName'] ??
+          json['name'] ??
+          json['username'] ??
+          '',
+      email: json['email'],
+      role: _parseRole(json['role']),
+      status: json['status']?.toString(),
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'fullName': name,               // dikkat: field name -> fullName
+      'fullName': name,
       'email': email,
-      'phone': phone,
-      'role': userRoleToApi(role),    // 'TEAM_MEMBER' vs
+      'role': role.name, // backend değerlerine göre gerekirse mapping
       'status': status,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
+  }
+
+  AppUser copyWith({
+    String? id,
+    String? name,
+    String? email,
+    UserRole? role,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      role: role ?? this.role,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  static UserRole _parseRole(dynamic value) {
+    final v = value?.toString().toUpperCase() ?? '';
+    switch (v) {
+      case 'EVENT_MANAGER':
+        return UserRole.eventManager;
+      case 'TEAM_LEADER':
+        return UserRole.teamLeader;
+      case 'TEAM_MEMBER':
+      default:
+        return UserRole.teamMember;
+    }
   }
 }

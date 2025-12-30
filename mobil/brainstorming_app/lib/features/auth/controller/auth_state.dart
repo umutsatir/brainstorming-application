@@ -4,7 +4,7 @@ class AuthState {
   final bool isLoading;
   final AppUser? user;
   final String? token;
-  final String? error; // 🔥 BURADA error alanı var
+  final String? error; 
 
   const AuthState({
     this.isLoading = false,

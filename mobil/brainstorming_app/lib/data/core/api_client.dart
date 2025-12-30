@@ -1,7 +1,9 @@
+// lib/data/core/api_client.dart
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/app_config.dart';
+import '../../core/config/app_config.dart';  // 🔥 önemli
 
 class ApiClient {
   final Dio _dio;
@@ -13,18 +15,9 @@ class ApiClient {
             baseUrl: config.baseUrl,
             connectTimeout: const Duration(seconds: 10),
             receiveTimeout: const Duration(seconds: 10),
-            headers: const {
-              'Content-Type': 'application/json',
-            },
-            validateStatus: (status) {
-              if (status == null) return false;
-              // 5xx → DioException, 4xx → normal response
-              return status < 500;
-            },
+            headers: const {'Content-Type': 'application/json'},
           ),
         );
-
-  String? get authToken => _authToken;
 
   void setAuthToken(String? token) {
     _authToken = token;
@@ -35,51 +28,20 @@ class ApiClient {
     }
   }
 
-  Future<Response> get(
-    String path, {
-    Map<String, dynamic>? queryParameters,
-  }) {
-    return _dio.get(path, queryParameters: queryParameters);
-  }
+  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) =>
+      _dio.get(path, queryParameters: queryParameters);
 
-  Future<Response> post(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-  }) {
-    return _dio.post(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-    );
-  }
+  Future<Response> post(String path, {dynamic data}) =>
+      _dio.post(path, data: data);
 
-  Future<Response> put(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-  }) {
-    return _dio.put(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-    );
-  }
+  Future<Response> put(String path, {dynamic data}) =>
+      _dio.put(path, data: data);
 
-  Future<Response> delete(
-    String path, {
-    dynamic data,
-    Map<String, dynamic>? queryParameters,
-  }) {
-    return _dio.delete(
-      path,
-      data: data,
-      queryParameters: queryParameters,
-    );
-  }
+  Future<Response> delete(String path, {dynamic data}) =>
+      _dio.delete(path, data: data);
 }
 
-/// Buradaki provider, AppConfig’ten ApiClient üretir
+/// ApiClient provider → Config'i okuyarak client oluşturuyor
 final apiClientProvider = Provider<ApiClient>((ref) {
   final config = ref.watch(appConfigProvider);
   return ApiClient(config);

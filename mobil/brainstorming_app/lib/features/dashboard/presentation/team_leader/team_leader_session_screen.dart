@@ -1,10 +1,14 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../data/repository/session_repository.dart';
 
 /// ------------------------------------------------------------
 /// UI MODEL – Leader canlı session için temel config
+/// (Bu hala navigation ile geliyor: SessionHistory’den vs.)
 /// ------------------------------------------------------------
-/// Phase 3’te backend DTO’sundan (GET /sessions/{id}) map edilecek.
 class UiLeaderLiveSessionConfig {
   final int sessionId;
   final int teamId;
@@ -28,7 +32,7 @@ class UiLeaderLiveSessionConfig {
 }
 
 /// ------------------------------------------------------------
-/// Round summary modeli (UI için)
+/// Round summary modeli (UI için – şimdilik dummy)
 /// ------------------------------------------------------------
 class RoundInfo {
   final int roundNumber;
@@ -43,19 +47,17 @@ class RoundInfo {
 }
 
 /// ------------------------------------------------------------
-/// LEADER SESSION SCREEN – 6-3-5
+/// LEADER SESSION SCREEN – 6-3-5 (Backend entegre)
 /// ------------------------------------------------------------
-/// Backend requirement’larına göre:
+/// Kontrol tarafı:
+/// - POST  /api/sessions/{sessionId}/control { action: START/PAUSE/RESUME/END }
+/// - POST  /api/sessions/{sessionId}/rounds/advance
+/// - POST  /api/ai/sessions/{sessionId}/suggestions
+/// - GET   /api/sessions/{sessionId} (state sync)
 ///
-/// - POST  /teams/{teamId}/sessions
-/// - GET   /sessions/{sessionId}
-/// - PATCH /sessions/{sessionId}/control { action: START/PAUSE/RESUME/END }
-/// - POST  /sessions/{sessionId}/rounds/advance
-/// - POST  /ai/sessions/{sessionId}/suggestions
-/// - GET   /reports/sessions/{sessionId}
-///
-/// Şimdilik sadece lokal state + dummy akış.
-class LeaderSessionScreen extends StatefulWidget {
+/// WebSocket entegrasyonu için TODO noktaları yorumlarda.
+/// Şimdilik timer client-side’da dönüyor ama state backend’e yazılıyor.
+class LeaderSessionScreen extends ConsumerStatefulWidget {
   final UiLeaderLiveSessionConfig config;
 
   const LeaderSessionScreen({
@@ -64,10 +66,11 @@ class LeaderSessionScreen extends StatefulWidget {
   });
 
   @override
-  State<LeaderSessionScreen> createState() => _LeaderSessionScreenState();
+  ConsumerState<LeaderSessionScreen> createState() =>
+      _LeaderSessionScreenState();
 }
 
-class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
+class _LeaderSessionScreenState extends ConsumerState<LeaderSessionScreen> {
   // Config’ten convenience getter’lar
   int get _totalRounds => widget.config.totalRounds;
   Duration get _roundDuration =>
@@ -80,13 +83,20 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
   int get _sessionId => widget.config.sessionId;
   int get _teamId => widget.config.teamId;
 
-  // Session state (backend karşılığı: Session.status, currentRound, timerRemainingSeconds)
-  int _currentRound = 0; // 0 = PENDING (henüz START çağrılmamış)
+  // Session state (backend karşılığı: status, currentRound, timerRemainingSeconds)
+  int _currentRound = 0; // 0 = PENDING
   int _remainingSeconds = 0;
 
   bool _isSessionActive = false; // RUNNING/PAUSED/WAITING
   bool _isRoundActive = false;
   bool _isPaused = false;
+
+  bool _isActionLoading = false; // START / PAUSE / RESUME / NEXT / END call’ları
+
+  Timer? _timer;
+
+  // Rounds summary (dummy) – Phase 3’te GET /reports/sessions/{id} ile gelecek
+  final List<RoundInfo> _roundsSummary = [];
 
   // UI için insan okunur status (backend enum’una denk gelecek)
   String get _sessionStatusLabel {
@@ -105,46 +115,108 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
     return 'WAITING – next round not started';
   }
 
-  Timer? _timer;
-
-  // Rounds summary (dummy) – Phase 3’te GET /reports/sessions/{id} ile gelecek
-  final List<RoundInfo> _roundsSummary = [];
+  @override
+  void initState() {
+    super.initState();
+    // Ekran açıldığında mevcut state’i backend’den çekelim.
+    _syncFromBackendInitial();
+    // TODO (WebSocket):
+    // Burada sessionId için WebSocket’e subscribe olunabilir.
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    // TODO (WebSocket):
+    // WebSocket bağlantısını kapat.
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // BACKEND STATE SYNC
+  // ---------------------------------------------------------------------------
+
+  Future<void> _syncFromBackendInitial() async {
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.getLiveSessionState(_sessionId);
+
+      setState(() {
+        _currentRound = state.currentRound;
+        _remainingSeconds = state.timerRemainingSeconds;
+        _isSessionActive =
+            !(state.isPending || state.isCompleted); // RUNNING/PAUSED/WAITING
+        _isPaused = state.isPaused;
+        _isRoundActive = state.isRunning;
+
+        // Eğer timerRemaining 0 geldiyse, henüz start edilmemiş olabilir
+        if (_currentRound == 0) {
+          _isSessionActive = false;
+          _isRoundActive = false;
+          _isPaused = false;
+          _remainingSeconds = _roundDuration.inSeconds;
+        } else if (_remainingSeconds == 0 && state.isRunning) {
+          _remainingSeconds = _roundDuration.inSeconds;
+        }
+      });
+
+      if (_isSessionActive && _isRoundActive && !_isPaused) {
+        _startTimer();
+      }
+    } catch (_) {
+      // Sessiz geçiyoruz; kullanıcı ekranı zaten "PENDING" gibi görecek.
+    }
   }
 
   // ---------------------------------------------------------------------------
   // SESSION CONTROL (START / PAUSE / RESUME / NEXT ROUND / END)
   // ---------------------------------------------------------------------------
 
-  void _startSession() {
-    if (_isSessionActive) return;
+  Future<void> _startSession() async {
+    if (_isSessionActive || _isActionLoading) return;
 
-    // TODO (backend):
-    // PATCH /sessions/$_sessionId/control
-    // body: { "action": "START" }
+    setState(() => _isActionLoading = true);
 
-    setState(() {
-      _isSessionActive = true;
-      _currentRound = 1;
-      _isRoundActive = true;
-      _isPaused = false;
-      _remainingSeconds = _roundDuration.inSeconds;
-      _roundsSummary.clear();
-    });
-
-    _startTimer();
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Session started. Round 1 is now live.'),
-        ),
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.controlSession(
+        sessionId: _sessionId,
+        action: 'START',
       );
+
+      setState(() {
+        _isSessionActive = true;
+        _currentRound = state.currentRound == 0 ? 1 : state.currentRound;
+        _isRoundActive = state.isRunning || _currentRound > 0;
+        _isPaused = false;
+        _remainingSeconds = state.timerRemainingSeconds > 0
+            ? state.timerRemainingSeconds
+            : _roundDuration.inSeconds;
+        _roundsSummary.clear();
+      });
+
+      _startTimer();
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Session started. Round 1 is now live.'),
+          ),
+        );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Failed to start session: $e'),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
+    }
   }
 
   void _startTimer() {
@@ -169,62 +241,120 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
     });
   }
 
-  void _onRoundAutoFinished() {
-    // Gerçekte backend tarafındaki timer servisi:
-    // POST /sessions/$_sessionId/rounds/advance
-    // ve WebSocket ile client’lara event gönderilecek.
+  Future<void> _onRoundAutoFinished() async {
+    // Timer client-side bittiğinde:
+    // Backend’de round advance tetikleyelim.
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.advanceRound(_sessionId);
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Round $_currentRound finished automatically.'),
-        ),
-      );
+      // Dummy summary: gerçek idea sayıları rapor endpoint’inden gelecek.
+      setState(() {
+        _roundsSummary.add(
+          RoundInfo(
+            roundNumber: _currentRound,
+            participants: _teamSize,
+            submittedIdeas: _teamSize * 3,
+          ),
+        );
 
-    // Dummy – her katılımcı 3 fikir yazmış gibi
-    _roundsSummary.add(
-      RoundInfo(
-        roundNumber: _currentRound,
-        participants: _teamSize,
-        submittedIdeas: _teamSize * 3,
-      ),
-    );
+        _currentRound = state.currentRound;
+        _remainingSeconds = state.timerRemainingSeconds > 0
+            ? state.timerRemainingSeconds
+            : _roundDuration.inSeconds;
+        _isSessionActive = !(state.isPending || state.isCompleted);
+        _isPaused = state.isPaused;
+        _isRoundActive = state.isRunning;
+      });
+
+      if (_isSessionActive && _isRoundActive && !_isPaused) {
+        _startTimer();
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Round $_currentRound finished (auto).'),
+          ),
+        );
+    } catch (e) {
+      // Eğer backend round advance’i kabul etmediyse, en azından uyar.
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Round auto-finish failed on backend: $e',
+            ),
+          ),
+        );
+    }
+
+    // TODO (WebSocket):
+    // Aslında gerçek product’ta timer server’da çalışır
+    // ve round advance event’i WebSocket ile gelir.
   }
 
-  void _togglePauseResume() {
-    if (!_isSessionActive || !_isRoundActive) return;
+  Future<void> _togglePauseResume() async {
+    if (!_isSessionActive || !_isRoundActive || _isActionLoading) return;
 
-    // TODO (backend):
-    // PATCH /sessions/$_sessionId/control
-    // body: { "action": "PAUSE" } / "RESUME"
+    setState(() => _isActionLoading = true);
 
-    setState(() {
-      _isPaused = !_isPaused;
-    });
+    final action = _isPaused ? 'RESUME' : 'PAUSE';
 
-    if (_isPaused) {
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.controlSession(
+        sessionId: _sessionId,
+        action: action,
+      );
+
+      setState(() {
+        _isPaused = state.isPaused;
+        _isSessionActive = !(state.isPending || state.isCompleted);
+        _isRoundActive = state.isRunning;
+        _remainingSeconds = state.timerRemainingSeconds > 0
+            ? state.timerRemainingSeconds
+            : _remainingSeconds;
+      });
+
+      if (_isPaused) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content:
+                  Text('Round paused. Participants cannot edit ideas.'),
+            ),
+          );
+      } else {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Round resumed. Timer is running again.'),
+            ),
+          );
+        _startTimer();
+      }
+    } catch (e) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
-          const SnackBar(
-            content: Text('Round paused. Participants cannot edit ideas.'),
+          SnackBar(
+            content: Text('Failed to $action round: $e'),
           ),
         );
-    } else {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: Text('Round resumed. Timer is running again.'),
-          ),
-        );
-      _startTimer();
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
     }
   }
 
-  void _goToNextRound() {
-    if (!_isSessionActive) return;
+  Future<void> _goToNextRound() async {
+    if (!_isSessionActive || _isActionLoading) return;
 
     if (_currentRound >= _totalRounds) {
       ScaffoldMessenger.of(context)
@@ -239,78 +369,115 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
       return;
     }
 
-    // Eğer önceki round hâlâ aktifse, onu manuel bitmiş sayalım (dummy)
-    if (_isRoundActive || _remainingSeconds > 0) {
-      _roundsSummary.add(
-        RoundInfo(
-          roundNumber: _currentRound,
-          participants: _teamSize,
-          submittedIdeas: _teamSize * 3, // dummy
-        ),
-      );
+    setState(() => _isActionLoading = true);
+
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.advanceRound(_sessionId);
+
+      // Önceki round’u dummy olarak summary’e ekle
+      setState(() {
+        _roundsSummary.add(
+          RoundInfo(
+            roundNumber: _currentRound == 0 ? 1 : _currentRound,
+            participants: _teamSize,
+            submittedIdeas: _teamSize * 3,
+          ),
+        );
+
+        _currentRound = state.currentRound;
+        _remainingSeconds = state.timerRemainingSeconds > 0
+            ? state.timerRemainingSeconds
+            : _roundDuration.inSeconds;
+        _isSessionActive = !(state.isPending || state.isCompleted);
+        _isPaused = state.isPaused;
+        _isRoundActive = state.isRunning;
+      });
+
+      if (_isSessionActive && _isRoundActive && !_isPaused) {
+        _startTimer();
+      }
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Round $_currentRound started.'),
+          ),
+        );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Failed to go to next round: $e'),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
     }
-
-    // TODO (backend):
-    // POST /sessions/$_sessionId/rounds/advance
-
-    setState(() {
-      _currentRound++;
-      _remainingSeconds = _roundDuration.inSeconds;
-      _isRoundActive = true;
-      _isPaused = false;
-    });
-
-    _startTimer();
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Round $_currentRound started.'),
-        ),
-      );
   }
 
-  void _endSession() {
-    if (!_isSessionActive) return;
+  Future<void> _endSession() async {
+    if (!_isSessionActive || _isActionLoading) return;
 
+    setState(() => _isActionLoading = true);
     _timer?.cancel();
 
-    // Eğer son round hâlâ aktifse, onu da özetlere ekleyelim (dummy)
-    if (_isRoundActive || _remainingSeconds > 0) {
-      _roundsSummary.add(
-        RoundInfo(
-          roundNumber: _currentRound,
-          participants: _teamSize,
-          submittedIdeas: _teamSize * 3, // dummy
-        ),
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final state = await repo.controlSession(
+        sessionId: _sessionId,
+        action: 'END',
       );
-    }
 
-    // TODO (backend):
-    // PATCH /sessions/$_sessionId/control
-    // body: { "action": "END" }
-
-    setState(() {
-      _isSessionActive = false;
-      _isRoundActive = false;
-      _isPaused = false;
-      _remainingSeconds = 0;
-    });
-
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Session ended. You can now check the report & AI summary for this session.',
+      // Son round özetini de ekleyelim (dummy)
+      if (_currentRound > 0) {
+        _roundsSummary.add(
+          RoundInfo(
+            roundNumber: _currentRound,
+            participants: _teamSize,
+            submittedIdeas: _teamSize * 3,
           ),
-        ),
-      );
+        );
+      }
+
+      setState(() {
+        _isSessionActive = false;
+        _isRoundActive = false;
+        _isPaused = false;
+        _remainingSeconds = 0;
+        _currentRound = state.currentRound;
+      });
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Session ended. You can now check the report & AI summary for this session.',
+            ),
+          ),
+        );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Failed to end session: $e'),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
+    }
   }
 
   Future<void> _askAiSuggestions() async {
-    if (!_isSessionActive || !_isRoundActive) {
+    if (!_isSessionActive || !_isRoundActive || _isActionLoading) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
@@ -323,19 +490,37 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
       return;
     }
 
-    // TODO (backend):
-    // POST /ai/sessions/$_sessionId/suggestions
-    // body: { "roundNumber": _currentRound }
+    setState(() => _isActionLoading = true);
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'Requesting AI suggestions for Round $_currentRound (dummy).',
-          ),
-        ),
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      await repo.requestAiSuggestions(
+        sessionId: _sessionId,
+        roundNumber: _currentRound,
       );
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              'Requesting AI suggestions for Round $_currentRound...',
+            ),
+          ),
+        );
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Failed to request AI suggestions: $e'),
+          ),
+        );
+    } finally {
+      if (mounted) {
+        setState(() => _isActionLoading = false);
+      }
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -637,7 +822,7 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                     _buildRoundInfoCard(),
                     const SizedBox(height: 16),
                     const Text(
-                      'Rounds summary (dummy)',
+                      'Rounds summary',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
@@ -649,7 +834,8 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                     Text(
                       'Note: In the real app, round start/stop and timer sync '
                       'will be driven by backend + WebSocket events. This screen '
-                      'currently simulates the 6-3-5 flow for UI/UX design.',
+                      'currently stores state to the backend and simulates the '
+                      'countdown locally.',
                       style: TextStyle(
                         fontSize: 11,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -670,13 +856,21 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton.icon(
-                      icon: Icon(
-                        !_isSessionActive
-                            ? Icons.play_arrow
-                            : (_currentRound >= _totalRounds
-                                ? Icons.check
-                                : Icons.skip_next),
-                      ),
+                      icon: _isActionLoading
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Icon(
+                              !_isSessionActive
+                                  ? Icons.play_arrow
+                                  : (_currentRound >= _totalRounds
+                                      ? Icons.check
+                                      : Icons.skip_next),
+                            ),
                       label: Text(
                         !_isSessionActive
                             ? 'Start session (Round 1)'
@@ -684,11 +878,13 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                                 ? 'All $_totalRounds rounds completed'
                                 : 'Start next round'),
                       ),
-                      onPressed: !_isSessionActive
-                          ? _startSession
-                          : (_currentRound >= _totalRounds
-                              ? null
-                              : _goToNextRound),
+                      onPressed: _isActionLoading
+                          ? null
+                          : (!_isSessionActive
+                              ? _startSession
+                              : (_currentRound >= _totalRounds
+                                  ? null
+                                  : _goToNextRound)),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -697,15 +893,24 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                     width: double.infinity,
                     height: 42,
                     child: OutlinedButton.icon(
-                      icon: Icon(
-                        _isPaused ? Icons.play_arrow : Icons.pause,
-                      ),
+                      icon: _isActionLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Icon(
+                              _isPaused ? Icons.play_arrow : Icons.pause,
+                            ),
                       label: Text(
                         !_isSessionActive
                             ? 'Pause / resume (session not started)'
                             : (_isPaused ? 'Resume round' : 'Pause round'),
                       ),
-                      onPressed: (!_isSessionActive || !_isRoundActive)
+                      onPressed: _isActionLoading ||
+                              (!_isSessionActive || !_isRoundActive)
                           ? null
                           : _togglePauseResume,
                     ),
@@ -716,12 +921,20 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                     width: double.infinity,
                     height: 42,
                     child: OutlinedButton.icon(
-                      icon: const Icon(Icons.auto_awesome),
+                      icon: _isActionLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Icon(Icons.auto_awesome),
                       label: const Text('Ask AI for suggestions'),
-                      onPressed:
-                          (!_isSessionActive || !_isRoundActive)
-                              ? null
-                              : _askAiSuggestions,
+                      onPressed: _isActionLoading ||
+                              (!_isSessionActive || !_isRoundActive)
+                          ? null
+                          : _askAiSuggestions,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -740,7 +953,8 @@ class _LeaderSessionScreenState extends State<LeaderSessionScreen> {
                           color: theme.colorScheme.error,
                         ),
                       ),
-                      onPressed: !_isSessionActive ? null : _endSession,
+                      onPressed:
+                          _isActionLoading || !_isSessionActive ? null : _endSession,
                     ),
                   ),
                   const SizedBox(height: 4),

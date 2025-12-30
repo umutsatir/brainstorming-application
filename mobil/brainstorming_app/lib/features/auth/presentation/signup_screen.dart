@@ -7,51 +7,57 @@ import '../../dashboard/presentation/dashboard_screen.dart';
 
 import '../../../core/enums/user_role.dart';
 import '../../../core/models/user.dart';
-import 'signup_screen.dart'; // 🔹 Yeni: SignUp import
+import 'login_screen.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key});
+class SignUpScreen extends ConsumerStatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  late final TextEditingController _fullNameController;
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
+  late final TextEditingController _confirmPasswordController;
 
-  // 🔹 Debug için seçilebilir rol (sadece kDebugMode'da kullanılacak)
   UserRole _debugSelectedRole = UserRole.teamMember;
 
   @override
   void initState() {
     super.initState();
+    _fullNameController = TextEditingController();
     _emailController = TextEditingController();
     _passwordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
   }
 
   @override
   void dispose() {
+    _fullNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  void _onLoginPressed() {
+  void _onSignUpPressed() {
     if (!_formKey.currentState!.validate()) return;
 
-    ref.read(authControllerProvider.notifier).login(
+    ref.read(authControllerProvider.notifier).register(
           email: _emailController.text.trim(),
           password: _passwordController.text,
+          fullName: _fullNameController.text.trim(),
         );
   }
 
-  void _goToSignUp() {
-    Navigator.of(context).push(
+  void _goToLogin() {
+    Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => const SignUpScreen(),
+        builder: (_) => const LoginScreen(),
       ),
     );
   }
@@ -60,13 +66,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
-    // 🔹 Login state değişince navigation + error snackbar
+    // 🔹 Register başarılı → Dashboard'a git
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
-      // Login başarılı → dashboard'a git
       if (previous?.user != next.user && next.user != null) {
         final originalUser = next.user!;
 
-        // 🔹 Debug modda rolü override ediyoruz
         final AppUser effectiveUser = kDebugMode
             ? AppUser(
                 id: originalUser.id,
@@ -86,7 +90,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
       }
 
-      // Hata varsa snackbar göster (errorMessage kullanıyoruz!)
+      // Hata mesajı
       if (next.errorMessage != null &&
           next.errorMessage!.isNotEmpty &&
           next.errorMessage != previous?.errorMessage) {
@@ -100,7 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('Sign Up'),
         centerTitle: true,
       ),
       body: Center(
@@ -114,7 +118,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    '6-3-5 Brainstorming',
+                    'Create your account',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
@@ -123,10 +127,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Sign in with your account provided by the Event Manager.',
+                    'Use your work e-mail given by the Event Manager.',
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
+
+                  // Full name
+                  TextFormField(
+                    controller: _fullNameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Full name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      final v = value?.trim() ?? '';
+                      if (v.isEmpty) {
+                        return 'Full name is required';
+                      }
+                      if (v.length < 2) {
+                        return 'Please enter a valid name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
                   // E-mail
                   TextFormField(
@@ -163,6 +187,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       }
                       if (value.length < 6) {
                         return 'Password must be at least 6 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm password
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Confirm password',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
                       }
                       return null;
                     },
@@ -205,26 +249,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: authState.isLoading ? null : _onLoginPressed,
+                      onPressed: authState.isLoading ? null : _onSignUpPressed,
                       child: authState.isLoading
                           ? const SizedBox(
                               width: 22,
                               height: 22,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Text('Sign in'),
+                          : const Text('Create account'),
                     ),
                   ),
 
                   const SizedBox(height: 16),
-                  // 🔹 Sign Up link
+                  // Back to login
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account?"),
+                      const Text('Already have an account?'),
                       TextButton(
-                        onPressed: authState.isLoading ? null : _goToSignUp,
-                        child: const Text('Sign up'),
+                        onPressed: authState.isLoading ? null : _goToLogin,
+                        child: const Text('Sign in'),
                       ),
                     ],
                   ),

@@ -1,70 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../data/repository/session_repository.dart';
 import 'team_leader_session_report_screen.dart';
 
 /// ------------------------------------------------------------
-/// SESSION HISTORY – UX’Lİ LİSTE
+/// SESSION HISTORY – BACKEND ENTEGRE EKRAN (SessionRepository ile)
 /// ------------------------------------------------------------
-
-class UiLeaderSessionHistoryItem {
-  final int sessionId;
-  final String topicTitle;
-  final String eventName;
-  final DateTime startedAt;
-  final int totalRounds;
-  final int completedRounds;
-  final int totalIdeas;
-  final bool isCompleted;
-
-  const UiLeaderSessionHistoryItem({
-    required this.sessionId,
-    required this.topicTitle,
-    required this.eventName,
-    required this.startedAt,
-    required this.totalRounds,
-    required this.completedRounds,
-    required this.totalIdeas,
-    required this.isCompleted,
-  });
-}
-
-// Dummy data – Phase 3’te backend’den gelecek
-List<UiLeaderSessionHistoryItem> _dummyLeaderHistory = [
-  UiLeaderSessionHistoryItem(
-    sessionId: 101,
-    topicTitle: 'Increase user engagement for mobile app',
-    eventName: 'Q1 Growth Strategy 6-3-5',
-    startedAt: DateTime(2025, 7, 1, 10, 0),
-    totalRounds: 6,
-    completedRounds: 6,
-    totalIdeas: 108,
-    isCompleted: true,
-  ),
-  UiLeaderSessionHistoryItem(
-    sessionId: 102,
-    topicTitle: 'Reduce onboarding friction',
-    eventName: 'Customer Experience Sprint',
-    startedAt: DateTime(2025, 6, 15, 14, 30),
-    totalRounds: 6,
-    completedRounds: 4,
-    totalIdeas: 72,
-    isCompleted: false,
-  ),
-  UiLeaderSessionHistoryItem(
-    sessionId: 103,
-    topicTitle: 'New monetization experiments',
-    eventName: 'Q2 Revenue Workshop',
-    startedAt: DateTime(2025, 5, 10, 9, 0),
-    totalRounds: 6,
-    completedRounds: 6,
-    totalIdeas: 110,
-    isCompleted: true,
-  ),
-];
 
 enum LeaderHistoryStatusFilter { all, completed, inProgress }
 
-class TeamLeaderSessionHistoryScreen extends StatefulWidget {
+class TeamLeaderSessionHistoryScreen extends ConsumerStatefulWidget {
   /// In progress bir oturum için “Go to live session” dendiğinde
   /// shell'e haber vermek için callback
   final void Function(UiLeaderSessionHistoryItem) onOpenLiveSession;
@@ -75,18 +21,55 @@ class TeamLeaderSessionHistoryScreen extends StatefulWidget {
   });
 
   @override
-  State<TeamLeaderSessionHistoryScreen> createState() =>
+  ConsumerState<TeamLeaderSessionHistoryScreen> createState() =>
       _TeamLeaderSessionHistoryScreenState();
 }
 
 class _TeamLeaderSessionHistoryScreenState
-    extends State<TeamLeaderSessionHistoryScreen> {
+    extends ConsumerState<TeamLeaderSessionHistoryScreen> {
   String _searchQuery = '';
   LeaderHistoryStatusFilter _statusFilter = LeaderHistoryStatusFilter.all;
   String _sortKey = 'Newest first';
 
+  // backend verisi
+  List<UiLeaderSessionHistoryItem> _sessions = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // TODO: Şimdilik sabit; ileride TL shell'den gerçek teamId geçeriz.
+  final int _teamId = 1;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSessions();
+  }
+
+  /// GET /api/sessions  (+ client-side teamId filtresi)
+  Future<void> _fetchSessions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(sessionRepositoryProvider);
+      final sessions = await repo.getTeamSessions(_teamId);
+
+      setState(() {
+        _sessions = sessions;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load sessions: $e';
+      });
+    }
+  }
+
   List<UiLeaderSessionHistoryItem> get _filtered {
-    var list = List<UiLeaderSessionHistoryItem>.from(_dummyLeaderHistory);
+    var list = List<UiLeaderSessionHistoryItem>.from(_sessions);
 
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -196,8 +179,9 @@ class _TeamLeaderSessionHistoryScreenState
                     label: const Text('All'),
                     selected: _statusFilter == LeaderHistoryStatusFilter.all,
                     onSelected: (_) {
-                      setState(() =>
-                          _statusFilter = LeaderHistoryStatusFilter.all);
+                      setState(
+                        () => _statusFilter = LeaderHistoryStatusFilter.all,
+                      );
                     },
                   ),
                   ChoiceChip(
@@ -205,8 +189,10 @@ class _TeamLeaderSessionHistoryScreenState
                     selected:
                         _statusFilter == LeaderHistoryStatusFilter.completed,
                     onSelected: (_) {
-                      setState(() =>
-                          _statusFilter = LeaderHistoryStatusFilter.completed);
+                      setState(
+                        () =>
+                            _statusFilter = LeaderHistoryStatusFilter.completed,
+                      );
                     },
                   ),
                   ChoiceChip(
@@ -214,8 +200,10 @@ class _TeamLeaderSessionHistoryScreenState
                     selected:
                         _statusFilter == LeaderHistoryStatusFilter.inProgress,
                     onSelected: (_) {
-                      setState(() =>
-                          _statusFilter = LeaderHistoryStatusFilter.inProgress);
+                      setState(
+                        () =>
+                            _statusFilter = LeaderHistoryStatusFilter.inProgress,
+                      );
                     },
                   ),
                   OutlinedButton.icon(
@@ -226,6 +214,31 @@ class _TeamLeaderSessionHistoryScreenState
                 ],
               ),
               const SizedBox(height: 8),
+              if (_isLoading) const LinearProgressIndicator(minHeight: 2),
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _fetchSessions,
+                      child: const Text(
+                        'Retry',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 4),
               Text(
                 '${items.length} session(s) found',
                 style: TextStyle(
@@ -239,12 +252,15 @@ class _TeamLeaderSessionHistoryScreenState
         const Divider(height: 1),
         Expanded(
           child: items.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No sessions match your filters.\nTry changing status or search text.',
-                    textAlign: TextAlign.center,
-                  ),
-                )
+              ? (_isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const Center(
+                      child: Text(
+                        'No sessions match your filters.\n'
+                        'Try changing status or search text.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ))
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: items.length,
@@ -369,8 +385,8 @@ class _TeamLeaderSessionHistoryScreenState
                                       ),
                                     );
                                   },
-                                  icon: const Icon(
-                                      Icons.analytics_outlined),
+                                  icon:
+                                      const Icon(Icons.analytics_outlined),
                                   label: const Text('Open report'),
                                 ),
 

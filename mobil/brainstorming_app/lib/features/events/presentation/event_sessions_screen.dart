@@ -1,128 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../reports/presentation/reports_screen.dart';
-/// ---- UI MODELLERİ ----
+import '../../../../data/repository/event_manager_repository.dart';
 
-enum SessionStatus { scheduled, live, completed, cancelled }
-
-class UiEventSession {
-  final int id;
-  final int eventId;
-  final String eventName;
-  final String teamName;
-  final String topicTitle;
-  final String teamLeaderName;
-  final int participantsCount;
-  final SessionStatus status;
-  final int totalRounds;
-  final int completedRounds;
-  final int ideasCount;
-  final Duration roundDuration;
-  final DateTime? scheduledFor;
-  final DateTime? startedAt;
-  final DateTime? endedAt;
-  final bool aiSummaryReady;
-
-  const UiEventSession({
-    required this.id,
-    required this.eventId,
-    required this.eventName,
-    required this.teamName,
-    required this.topicTitle,
-    required this.teamLeaderName,
-    required this.participantsCount,
-    required this.status,
-    required this.totalRounds,
-    required this.completedRounds,
-    required this.ideasCount,
-    required this.roundDuration,
-    this.scheduledFor,
-    this.startedAt,
-    this.endedAt,
-    this.aiSummaryReady = false,
-  });
-}
-
-/// ---- DUMMY DATA (global) ----
-
-final List<UiEventSession> _dummySessions = [
-  UiEventSession(
-    id: 1,
-    eventId: 1,
-    eventName: 'Q3 Innovation Ideathon',
-    teamName: 'Team Aurora',
-    topicTitle: 'New Growth Channels for Q3',
-    teamLeaderName: 'Alex Morgan',
-    participantsCount: 6,
-    status: SessionStatus.completed,
-    totalRounds: 6,
-    completedRounds: 6,
-    ideasCount: 108,
-    roundDuration: const Duration(minutes: 5),
-    scheduledFor: DateTime(2025, 7, 1, 10, 0),
-    startedAt: DateTime(2025, 7, 1, 10, 5),
-    endedAt: DateTime(2025, 7, 1, 10, 35),
-    aiSummaryReady: true,
-  ),
-  UiEventSession(
-    id: 2,
-    eventId: 1,
-    eventName: 'Q3 Innovation Ideathon',
-    teamName: 'Customer Heroes',
-    topicTitle: 'Lower Churn in First 30 Days',
-    teamLeaderName: 'Sarah Lee',
-    participantsCount: 6,
-    status: SessionStatus.live,
-    totalRounds: 6,
-    completedRounds: 3,
-    ideasCount: 54,
-    roundDuration: const Duration(minutes: 5),
-    scheduledFor: DateTime(2025, 7, 2, 14, 0),
-    startedAt: DateTime(2025, 7, 2, 14, 5),
-    endedAt: null,
-    aiSummaryReady: false,
-  ),
-  UiEventSession(
-    id: 3,
-    eventId: 1,
-    eventName: 'Q3 Innovation Ideathon',
-    teamName: 'Team Pixel',
-    topicTitle: 'Onboarding Flow Improvements',
-    teamLeaderName: 'Mert Certel',
-    participantsCount: 5,
-    status: SessionStatus.scheduled,
-    totalRounds: 6,
-    completedRounds: 0,
-    ideasCount: 0,
-    roundDuration: const Duration(minutes: 5),
-    scheduledFor: DateTime(2025, 7, 3, 9, 30),
-    startedAt: null,
-    endedAt: null,
-    aiSummaryReady: false,
-  ),
-  UiEventSession(
-    id: 4,
-    eventId: 2,
-    eventName: 'Customer Centricity Sprint',
-    teamName: 'CX Ninjas',
-    topicTitle: 'VIP Retention Experiments',
-    teamLeaderName: 'Michael Chen',
-    participantsCount: 6,
-    status: SessionStatus.cancelled,
-    totalRounds: 6,
-    completedRounds: 1,
-    ideasCount: 12,
-    roundDuration: const Duration(minutes: 5),
-    scheduledFor: DateTime(2025, 6, 25, 15, 0),
-    startedAt: DateTime(2025, 6, 25, 15, 5),
-    endedAt: DateTime(2025, 6, 25, 15, 10),
-    aiSummaryReady: false,
-  ),
-];
-
-/// ---- EKRAN ----
 /// Belirli bir event için tüm 6-3-5 oturumlarını Event Manager gözünden gösterir.
 
-class EventSessionsScreen extends StatefulWidget {
+class EventSessionsScreen extends ConsumerStatefulWidget {
   final int eventId;
   final String eventName;
 
@@ -133,18 +17,54 @@ class EventSessionsScreen extends StatefulWidget {
   });
 
   @override
-  State<EventSessionsScreen> createState() => _EventSessionsScreenState();
+  ConsumerState<EventSessionsScreen> createState() =>
+      _EventSessionsScreenState();
 }
 
-class _EventSessionsScreenState extends State<EventSessionsScreen> {
+class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
   String _searchQuery = '';
   SessionStatus? _statusFilter; // null => All
   String _sortKey = 'Start time (newest first)';
 
+  bool _isLoading = false;
+  String? _errorMessage;
+  List<UiEventSession> _allSessions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSessions();
+  }
+
+  Future<void> _loadSessions() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(eventManagerRepositoryProvider);
+      final sessions =
+          await repo.getEventSessionsForEvent(widget.eventId);
+
+      setState(() {
+        _allSessions = sessions;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   List<UiEventSession> get _sessionsForEvent {
-    var list = _dummySessions
-        .where((s) => s.eventId == widget.eventId)
-        .toList(growable: false);
+    var list = List<UiEventSession>.from(_allSessions);
 
     if (_searchQuery.trim().isNotEmpty) {
       final q = _searchQuery.toLowerCase();
@@ -169,8 +89,10 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
       case 'Start time (newest first)':
       default:
         list.sort((a, b) {
-          final aTime = a.startedAt ?? a.scheduledFor ?? DateTime(1970);
-          final bTime = b.startedAt ?? b.scheduledFor ?? DateTime(1970);
+          final aTime =
+              a.startedAt ?? a.scheduledFor ?? DateTime(1970);
+          final bTime =
+              b.startedAt ?? b.scheduledFor ?? DateTime(1970);
           // newest first
           return bTime.compareTo(aTime);
         });
@@ -434,7 +356,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Start session #${s.id} now (EM override – dummy).',
+                              'Start session #${s.id} now (EM override – TODO: backend).',
                             );
                           },
                           icon: const Icon(Icons.play_circle_outline),
@@ -445,7 +367,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Pause live session #${s.id} (EM override – dummy).',
+                              'Pause live session #${s.id} (EM override – TODO: backend).',
                             );
                           },
                           icon: const Icon(Icons.pause_circle_outline),
@@ -456,7 +378,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Open live monitor for "${s.teamName}" (dummy).',
+                              'Open live monitor for "${s.teamName}" (TODO: route).',
                             );
                           },
                           icon: const Icon(Icons.monitor_heart),
@@ -466,8 +388,12 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Open AI summary for "${s.teamName}" (dummy – Reports tab).',
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReportsScreen(
+                                  initialEventId: s.eventId,
+                                ),
+                              ),
                             );
                           },
                           icon: const Icon(Icons.auto_awesome),
@@ -479,19 +405,23 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Request AI summary for session #${s.id} (dummy – will call ChatGPT).',
+                              'Request AI summary for session #${s.id} (TODO: backend).',
                             );
                           },
-                          icon: const Icon(Icons.auto_fix_high_outlined),
+                          icon:
+                              const Icon(Icons.auto_fix_high_outlined),
                           label: const Text('Request AI summary'),
                         ),
                       OutlinedButton.icon(
                         onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => ReportsScreen(initialEventId: s.eventId),
-                          ),
-                        );
+                          Navigator.of(context).pop();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => ReportsScreen(
+                                initialEventId: s.eventId,
+                              ),
+                            ),
+                          );
                         },
                         icon: const Icon(Icons.table_view),
                         label: const Text('View in Reports'),
@@ -501,7 +431,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Force end live session #${s.id} (dummy).',
+                              'Force end live session #${s.id} (TODO: backend).',
                             );
                           },
                           icon: Icon(
@@ -520,7 +450,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                           onPressed: () {
                             Navigator.of(context).pop();
                             _showSnack(
-                              'Cancel scheduled session #${s.id} (dummy).',
+                              'Cancel scheduled session #${s.id} (TODO: backend).',
                             );
                           },
                           icon: Icon(
@@ -546,7 +476,6 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
   }
 
   void _returnAndPop() {
-    // parent String bekliyorsa null gitmesin diye
     Navigator.of(context).pop('');
   }
 
@@ -567,6 +496,20 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
             onPressed: _returnAndPop,
           ),
           title: Text('Sessions – ${widget.eventName}'),
+          actions: [
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+          ],
         ),
         body: Column(
           children: [
@@ -597,6 +540,31 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                       color: theme.colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Failed to load sessions: $_errorMessage',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.error,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loadSessions,
+                          child: const Text(
+                            'Retry',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -738,155 +706,195 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Küçük summary chip card
+                  // Küçük summary chip card (değişmeden bırakıyorum)
                   Card(
-  elevation: 0,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(14),
-    side: BorderSide(
-      color: theme.colorScheme.outlineVariant,
-    ),
-  ),
-  child: Padding(
-    padding: const EdgeInsets.symmetric(
-      horizontal: 8, // biraz daralttık
-      vertical: 8,
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: _SummaryChip(
-              icon: Icons.list_alt,
-              label: 'Total sessions',
-              value: '$_totalSessions',
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: _SummaryChip(
-              icon: Icons.live_tv,
-              label: 'Live now',
-              value: '$_liveSessions',
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: _SummaryChip(
-              icon: Icons.lightbulb_outline,
-              label: 'Total ideas',
-              value: '$_totalIdeas',
-            ),
-          ),
-        ),
-        const SizedBox(width: 4),
-        Expanded(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: _SummaryChip(
-              icon: Icons.groups,
-              label: 'Teams',
-              value: '$_totalTeams',
-            ),
-          ),
-        ),
-      ],
-    ),
-  ),
-),
-
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(
+                        color: theme.colorScheme.outlineVariant,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _SummaryChip(
+                                icon: Icons.list_alt,
+                                label: 'Total sessions',
+                                value: '$_totalSessions',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _SummaryChip(
+                                icon: Icons.live_tv,
+                                label: 'Live now',
+                                value: '$_liveSessions',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _SummaryChip(
+                                icon: Icons.lightbulb_outline,
+                                label: 'Total ideas',
+                                value: '$_totalIdeas',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: _SummaryChip(
+                                icon: Icons.groups,
+                                label: 'Teams',
+                                value: '$_totalTeams',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
             const Divider(height: 1),
             // Liste
             Expanded(
-              child: sessions.isEmpty
-                  ? const Center(
+              child: Builder(
+                builder: (_) {
+                  if (_isLoading && sessions.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (_errorMessage != null && sessions.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Could not load sessions for this event.',
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          TextButton(
+                            onPressed: _loadSessions,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  if (sessions.isEmpty) {
+                    return const Center(
                       child: Text(
                         'No sessions for this event yet.\n'
                         'Teams will appear here once they start 6-3-5.',
                         textAlign: TextAlign.center,
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: sessions.length,
-                      separatorBuilder: (_, __) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final s = sessions[index];
-                        return _SessionCard(
-                          session: s,
-                          statusLabel: _statusLabel(s.status),
-                          statusChipColor:
-                              _statusChipColor(s.status, context),
-                          statusTextColor:
-                              _statusTextColor(s.status, context),
-                          formattedStart: _formatDateTime(
-                            s.startedAt ?? s.scheduledFor,
-                          ),
-                          formattedEnd: _formatDateTime(s.endedAt),
-                          onTap: () => _openDetailsSheet(s),
-                          onActionSelected: (action) {
-                            if (action == 'Open live monitor') {
-                              _showSnack(
-                                'Open live monitor for "${s.teamName}" (dummy).',
-                              );
-                            } else if (action ==
-                                'End session (force)') {
-                              _showSnack(
-                                'Force end session #${s.id} (dummy).',
-                              );
-                            } else if (action == 'Cancel session') {
-                              _showSnack(
-                                'Cancel scheduled session #${s.id} (dummy).',
-                              );
-                            } else if (action == 'Delete record') {
-                              _showSnack(
-                                'Delete session record #${s.id} (dummy).',
-                              );
-                            } else if (action ==
-                                'Start session now') {
-                              _showSnack(
-                                'Start session #${s.id} now (EM override – dummy).',
-                              );
-                            } else if (action ==
-                                'Pause session') {
-                              _showSnack(
-                                'Pause live session #${s.id} (EM override – dummy).',
-                              );
-                            } else if (action ==
-                                'View AI summary') {
-                              _showSnack(
-                                'Open AI summary for "${s.teamName}" (dummy – Reports tab).',
-                              );
-                            } else if (action ==
-                                'Request AI summary') {
-                              _showSnack(
-                                'Request AI summary for session #${s.id} (dummy – will call ChatGPT).',
-                              );
-                            } else if (action ==
-                                'View in Reports') {
-                              _showSnack(
-                                'Open Reports view for session #${s.id} (dummy).',
-                              );
-                            }
-                          },
-                        );
-                      },
-                    ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: sessions.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final s = sessions[index];
+                      return _SessionCard(
+                        session: s,
+                        statusLabel: _statusLabel(s.status),
+                        statusChipColor:
+                            _statusChipColor(s.status, context),
+                        statusTextColor:
+                            _statusTextColor(s.status, context),
+                        formattedStart: _formatDateTime(
+                          s.startedAt ?? s.scheduledFor,
+                        ),
+                        formattedEnd: _formatDateTime(s.endedAt),
+                        onTap: () => _openDetailsSheet(s),
+                        onActionSelected: (action) {
+                          // Burada da arka planı bağlamak istersen
+                          // repository üzerinden EM override’lar yazabilirsin.
+                          if (action == 'Open live monitor') {
+                            _showSnack(
+                              'Open live monitor for "${s.teamName}" (TODO: route).',
+                            );
+                          } else if (action ==
+                              'End session (force)') {
+                            _showSnack(
+                              'Force end session #${s.id} (TODO: backend).',
+                            );
+                          } else if (action == 'Cancel session') {
+                            _showSnack(
+                              'Cancel scheduled session #${s.id} (TODO: backend).',
+                            );
+                          } else if (action == 'Delete record') {
+                            _showSnack(
+                              'Delete session record #${s.id} (TODO: backend).',
+                            );
+                          } else if (action ==
+                              'Start session now') {
+                            _showSnack(
+                              'Start session #${s.id} now (EM override – TODO: backend).',
+                            );
+                          } else if (action ==
+                              'Pause session') {
+                            _showSnack(
+                              'Pause live session #${s.id} (TODO: backend).',
+                            );
+                          } else if (action ==
+                              'View AI summary') {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReportsScreen(
+                                  initialEventId: s.eventId,
+                                ),
+                              ),
+                            );
+                          } else if (action ==
+                              'Request AI summary') {
+                            _showSnack(
+                              'Request AI summary for session #${s.id} (TODO: backend).',
+                            );
+                          } else if (action ==
+                              'View in Reports') {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ReportsScreen(
+                                  initialEventId: s.eventId,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -895,7 +903,7 @@ class _EventSessionsScreenState extends State<EventSessionsScreen> {
   }
 }
 
-/// ---- Yardımcı widget’lar ----
+/// ---- Yardımcı widget’lar (Aynen bırakıyorum) ----
 
 class _SessionCard extends StatelessWidget {
   final UiEventSession session;
@@ -1232,8 +1240,6 @@ class _SummaryChip extends StatelessWidget {
     );
   }
 }
-
-
 
 class _DetailRow extends StatelessWidget {
   final IconData icon;

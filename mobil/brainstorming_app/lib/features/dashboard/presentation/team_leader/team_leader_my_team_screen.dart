@@ -1,93 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../data/teams/team_repository.dart ';
 /// ------------------------------------------------------------
-/// MY TEAM – UX’Lİ LİSTE
+/// MY TEAM – BACKEND ENTEGRE EKRAN (TeamRepository ile)
 /// ------------------------------------------------------------
 
-enum TeamMemberStatus { ready, invited, offline }
-
-class UiTeamMemberSummary {
-  final int id;
-  final String name;
-  final String email;
-  final TeamMemberStatus status;
-
-  const UiTeamMemberSummary({
-    required this.id,
-    required this.name,
-    required this.email,
-    required this.status,
-  });
-
-  UiTeamMemberSummary copyWith({
-    int? id,
-    String? name,
-    String? email,
-    TeamMemberStatus? status,
-  }) {
-    return UiTeamMemberSummary(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      status: status ?? this.status,
-    );
-  }
-}
-
-// Dummy takım – Phase 3’te backend /teams/{id}/members’dan gelecek
-const List<UiTeamMemberSummary> _dummyTeamMembers = [
-  UiTeamMemberSummary(
-    id: 1,
-    name: 'Alex Morgan',
-    email: 'alex.morgan@example.com',
-    status: TeamMemberStatus.ready,
-  ),
-  UiTeamMemberSummary(
-    id: 2,
-    name: 'Mia Johnson',
-    email: 'mia.johnson@example.com',
-    status: TeamMemberStatus.ready,
-  ),
-  UiTeamMemberSummary(
-    id: 3,
-    name: 'Oliver Smith',
-    email: 'oliver.smith@example.com',
-    status: TeamMemberStatus.invited,
-  ),
-  UiTeamMemberSummary(
-    id: 4,
-    name: 'Lucas White',
-    email: 'lucas.white@example.com',
-    status: TeamMemberStatus.offline,
-  ),
-  UiTeamMemberSummary(
-    id: 5,
-    name: 'Emma Brown',
-    email: 'emma.brown@example.com',
-    status: TeamMemberStatus.ready,
-  ),
-];
-
-class TeamLeaderMyTeamScreen extends StatefulWidget {
+class TeamLeaderMyTeamScreen extends ConsumerStatefulWidget {
   const TeamLeaderMyTeamScreen({super.key});
 
   @override
-  State<TeamLeaderMyTeamScreen> createState() =>
+  ConsumerState<TeamLeaderMyTeamScreen> createState() =>
       _TeamLeaderMyTeamScreenState();
 }
 
-class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
+class _TeamLeaderMyTeamScreenState
+    extends ConsumerState<TeamLeaderMyTeamScreen> {
   String _searchQuery = '';
   TeamMemberStatus? _statusFilter; // null -> All
 
-  /// Gerçek hayatta: GET /teams/{teamId}/members cevabı
-  late List<UiTeamMemberSummary> _members;
+  /// Gerçek backend datası
+  List<UiTeamMemberSummary> _members = [];
+
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  // TODO: Şimdilik sabit. İleride TeamLeaderShell’den parametre olarak al.
+  final int _teamId = 1;
 
   @override
   void initState() {
     super.initState();
-    // Dummy data’yı mutable listeye kopyala
-    _members = List<UiTeamMemberSummary>.from(_dummyTeamMembers);
+    _fetchMembers();
+  }
+
+  Future<void> _fetchMembers() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(teamRepositoryProvider);
+      final members = await repo.getTeamMembers(_teamId);
+
+      setState(() {
+        _members = members;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load team members: $e';
+      });
+    }
   }
 
   List<UiTeamMemberSummary> get _filtered {
@@ -138,11 +104,9 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
       ..showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  /// Invite flow – şu anda sadece bilgi sheet’i.
+  /// Backend entegrasyonu için TeamRepository.inviteMember kullanabilirsin.
   Future<void> _onInviteMember() async {
-    // Gerçekte:
-    // - POST /teams/{teamId}/invitations
-    // - Backend join link / code üretir
-    // - Burada share sheet veya copy to clipboard açarsın
     await showModalBottomSheet(
       context: context,
       showDragHandle: true,
@@ -163,8 +127,8 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'In the real app, this will send an email invitation or '
-                  'generate a join link / team code using the backend.',
+                  'In the real app, this will call the backend invitation '
+                  'endpoint and send an email or generate a join link / team code.',
                   style: TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 12),
@@ -207,14 +171,25 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
         );
       },
     );
+
+    // İleride:
+    // final repo = ref.read(teamRepositoryProvider);
+    // await repo.inviteMember(_teamId, email: '...');
+    // sonra _fetchMembers() ile listeyi yenileyebilirsin.
   }
 
+  /// Resend invite – backend’e POST atan versiyon
   Future<void> _onResendInvite(UiTeamMemberSummary member) async {
-    // TODO: backend
-    // POST /teams/{teamId}/members/{memberId}/resend-invite
-    _showSnack('Resent invitation to ${member.email} (dummy).');
+    try {
+      final repo = ref.read(teamRepositoryProvider);
+      await repo.resendInvite(_teamId, member.id);
+      _showSnack('Resent invitation to ${member.email}.');
+    } catch (e) {
+      _showSnack('Failed to resend invite: $e');
+    }
   }
 
+  /// Remove member – backend delete
   Future<void> _onRemoveMember(UiTeamMemberSummary member) async {
     final result = await showDialog<bool>(
       context: context,
@@ -241,13 +216,19 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
       },
     );
 
-    if (result == true) {
-      // TODO: backend
-      // DELETE /teams/{teamId}/members/{member.id}
+    if (result != true) return;
+
+    try {
+      final repo = ref.read(teamRepositoryProvider);
+      await repo.removeMember(_teamId, member.id);
+
       setState(() {
         _members.removeWhere((m) => m.id == member.id);
       });
-      _showSnack('${member.name} removed from team (dummy).');
+
+      _showSnack('${member.name} removed from team.');
+    } catch (e) {
+      _showSnack('Failed to remove member: $e');
     }
   }
 
@@ -262,6 +243,7 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
 
     return Column(
       children: [
+        // Üst filtre + summary
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Column(
@@ -354,18 +336,50 @@ class _TeamLeaderMyTeamScreenState extends State<TeamLeaderMyTeamScreen> {
                   ),
                 ],
               ),
+
+              // Hata / loading göstergesi
+              if (_isLoading) ...[
+                const SizedBox(height: 8),
+                const LinearProgressIndicator(minHeight: 2),
+              ],
+              if (_errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _fetchMembers,
+                      child: const Text(
+                        'Retry',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
         const Divider(height: 1),
         Expanded(
           child: members.isEmpty
-              ? const Center(
-                  child: Text(
-                    'No team members match your filters.\nTry changing search or status.',
-                    textAlign: TextAlign.center,
-                  ),
-                )
+              ? _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const Center(
+                      child: Text(
+                        'No team members match your filters.\n'
+                        'Try changing search or status.',
+                        textAlign: TextAlign.center,
+                      ),
+                    )
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: members.length,

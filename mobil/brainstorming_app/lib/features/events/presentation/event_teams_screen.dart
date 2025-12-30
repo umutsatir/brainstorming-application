@@ -1,75 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// ---- UI MODELLERİ (global teams) ----
-
-class UiTeamSummary {
-  final int id;
-  final String name;
-  final String focus;
-  final int memberCount;
-  final int maxMembers;
-  final int ideasCount;
-  final int sessionsCount;
-
-  const UiTeamSummary({
-    required this.id,
-    required this.name,
-    required this.focus,
-    required this.memberCount,
-    required this.maxMembers,
-    required this.ideasCount,
-    required this.sessionsCount,
-  });
-}
-
-/// ---- GLOBAL DUMMY TEAM KATALOĞU ----
-final List<UiTeamSummary> _allDummyTeams = [
-  UiTeamSummary(
-    id: 1,
-    name: 'Cross-Functional Squad A',
-    focus: 'Q3 Growth Strategy 6-3-5',
-    memberCount: 6,
-    maxMembers: 6,
-    ideasCount: 324,
-    sessionsCount: 3,
-  ),
-  UiTeamSummary(
-    id: 2,
-    name: 'Team Beta',
-    focus: 'Customer Retention Experiments',
-    memberCount: 4,
-    maxMembers: 6,
-    ideasCount: 120,
-    sessionsCount: 1,
-  ),
-  UiTeamSummary(
-    id: 3,
-    name: 'Design Guild',
-    focus: 'Onboarding UX Redesign',
-    memberCount: 5,
-    maxMembers: 6,
-    ideasCount: 210,
-    sessionsCount: 4,
-  ),
-  UiTeamSummary(
-    id: 4,
-    name: 'Ops Task Force',
-    focus: 'Internal tools cleanup sprint',
-    memberCount: 3,
-    maxMembers: 5,
-    ideasCount: 45,
-    sessionsCount: 2,
-  ),
-];
-
-/// ---- EVENT → TEAM ASSIGNMENT HARİTASI ----
-/// eventId -> teamId set’i
-final Map<int, Set<int>> _eventTeamAssignments = {};
+import '../../../../data/repository/event_manager_repository.dart';
 
 /// ---- EKRAN ----
 /// Sadece mevcut takımları bu event’e assign / unassign eder.
 /// Takım create / edit yok; onlar global Teams ekranında.
-class EventTeamsScreen extends StatefulWidget {
+
+class EventTeamsScreen extends ConsumerStatefulWidget {
   final int eventId;
   final String eventName;
   final int initialTeamsCount;
@@ -82,21 +20,59 @@ class EventTeamsScreen extends StatefulWidget {
   });
 
   @override
-  State<EventTeamsScreen> createState() => _EventTeamsScreenState();
+  ConsumerState<EventTeamsScreen> createState() =>
+      _EventTeamsScreenState();
 }
 
-class _EventTeamsScreenState extends State<EventTeamsScreen> {
+class _EventTeamsScreenState extends ConsumerState<EventTeamsScreen> {
   String _searchQuery = '';
 
-  Set<int> get _assignedIds {
-    return _eventTeamAssignments[widget.eventId] ?? <int>{};
-  }
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  List<UiTeamSummary> _allTeams = [];
+  Set<int> _assignedIds = <int>{};
 
   int get _assignedCount => _assignedIds.length;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadTeams();
+  }
+
+  Future<void> _loadTeams() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(eventManagerRepositoryProvider);
+      final allTeams = await repo.getAllTeams();
+      final assignedIds =
+          await repo.getAssignedTeamIds(widget.eventId);
+
+      setState(() {
+        _allTeams = allTeams;
+        _assignedIds = assignedIds;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   /// Arama sonrası tüm takımlar
   List<UiTeamSummary> get _filteredAll {
-    var list = List<UiTeamSummary>.from(_allDummyTeams);
+    var list = List<UiTeamSummary>.from(_allTeams);
 
     // arama
     if (_searchQuery.trim().isNotEmpty) {
@@ -127,16 +103,51 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
   List<UiTeamSummary> get _availableTeams =>
       _filteredAll.where((t) => !_assignedIds.contains(t.id)).toList();
 
-  void _toggleAssign(UiTeamSummary team) {
+  Future<void> _toggleAssign(UiTeamSummary team) async {
+    final repo = ref.read(eventManagerRepositoryProvider);
+    final isCurrentlyAssigned = _assignedIds.contains(team.id);
+
     setState(() {
-      final set =
-          _eventTeamAssignments.putIfAbsent(widget.eventId, () => <int>{});
-      if (set.contains(team.id)) {
-        set.remove(team.id); // UNASSIGN
-      } else {
-        set.add(team.id); // ASSIGN
-      }
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      if (isCurrentlyAssigned) {
+        await repo.unassignTeamFromEvent(
+          eventId: widget.eventId,
+          teamId: team.id,
+        );
+        setState(() {
+          _assignedIds.remove(team.id);
+        });
+        _showSnack(
+          'Removed "${team.name}" from this event.',
+        );
+      } else {
+        await repo.assignTeamToEvent(
+          eventId: widget.eventId,
+          teamId: team.id,
+        );
+        setState(() {
+          _assignedIds.add(team.id);
+        });
+        _showSnack(
+          'Assigned "${team.name}" to this event.',
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+      _showSnack('Failed to update assignment: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _showSnack(String msg) {
@@ -146,6 +157,7 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
   }
 
   void _returnAndPop() {
+    // parent int bekliyor (assigned count); yoksa string vs ise ona göre değiştirirsin
     Navigator.of(context).pop(_assignedCount);
   }
 
@@ -167,6 +179,20 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
             onPressed: _returnAndPop,
           ),
           title: Text('Assign teams – ${widget.eventName}'),
+          actions: [
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+          ],
         ),
         body: Column(
           children: [
@@ -184,7 +210,8 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
                           'Pick which existing teams will participate in this event.',
                           style: TextStyle(
                             fontSize: 13,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            color: theme.colorScheme.onSurface
+                                .withOpacity(0.7),
                           ),
                         ),
                       ),
@@ -221,100 +248,124 @@ class _EventTeamsScreenState extends State<EventTeamsScreen> {
                       setState(() => _searchQuery = value);
                     },
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Failed to load teams: $_errorMessage',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.error,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loadTeams,
+                          child: const Text(
+                            'Retry',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),
             const Divider(height: 1),
             // ---- Gövde: assigned card + available list ----
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Assigned teams card
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                    ),
-                    child: Padding(
+              child: _isLoading && _allTeams.isEmpty
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    )
+                  : ListView(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Assigned teams',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                      children: [
+                        // Assigned teams card
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: theme.colorScheme.outlineVariant,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          if (assigned.isEmpty)
-                            Text(
-                              'No teams are assigned to this event yet.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7),
-                              ),
-                            )
-                          else
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment.start,
                               children: [
-                                for (final team in assigned)
-                                  _AssignedTeamChip(
-                                    team: team,
-                                    onUnassign: () {
-                                      _toggleAssign(team);
-                                      _showSnack(
-                                        'Removed "${team.name}" from this event.',
-                                      );
-                                    },
+                                const Text(
+                                  'Assigned teams',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (assigned.isEmpty)
+                                  Text(
+                                    'No teams are assigned to this event yet.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme
+                                          .colorScheme.onSurface
+                                          .withOpacity(0.7),
+                                    ),
+                                  )
+                                else
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final team in assigned)
+                                        _AssignedTeamChip(
+                                          team: team,
+                                          onUnassign: () {
+                                            _toggleAssign(team);
+                                          },
+                                        ),
+                                    ],
                                   ),
                               ],
                             ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Available header
-                  const Text(
-                    'Available teams',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (available.isEmpty)
-                    const Text(
-                      'No more teams available with current search.',
-                      style: TextStyle(fontSize: 12),
-                    )
-                  else
-                    ...[
-                      const SizedBox(height: 4),
-                      for (final team in available) ...[
-                        _AvailableTeamCard(
-                          team: team,
-                          onAssign: () {
-                            _toggleAssign(team);
-                            _showSnack(
-                              'Assigned "${team.name}" to this event.',
-                            );
-                          },
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
+                        // Available header
+                        const Text(
+                          'Available teams',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (available.isEmpty)
+                          const Text(
+                            'No more teams available with current search.',
+                            style: TextStyle(fontSize: 12),
+                          )
+                        else ...[
+                          const SizedBox(height: 4),
+                          for (final team in available) ...[
+                            _AvailableTeamCard(
+                              team: team,
+                              onAssign: () {
+                                _toggleAssign(team);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
                       ],
-                    ],
-                ],
-              ),
+                    ),
             ),
           ],
         ),
@@ -440,8 +491,8 @@ class _AvailableTeamCard extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: capacity.clamp(0.0, 1.0),
                       minHeight: 6,
-                      backgroundColor: theme.colorScheme.outlineVariant
-                          .withOpacity(0.4),
+                      backgroundColor:
+                          theme.colorScheme.outlineVariant.withOpacity(0.4),
                     ),
                   ),
                 ),

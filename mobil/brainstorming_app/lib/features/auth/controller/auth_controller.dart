@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/user.dart';
-import '../../../data/auth/auth_repository.dart';
+import '../../../data/repository/auth_repository.dart';
 
 /// Ekranların dinleyeceği auth state
 class AuthState {
@@ -43,6 +43,7 @@ class AuthController extends Notifier<AuthState> {
     return AuthState.initial;
   }
 
+  /// LOGIN
   Future<AppUser?> login({
     required String email,
     required String password,
@@ -71,6 +72,38 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// SIGN UP (register)
+  Future<AppUser?> register({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+
+    try {
+      final user = await _authRepository.register(
+        email: email,
+        password: password,
+        fullName: fullName,
+      );
+
+      state = state.copyWith(
+        isLoading: false,
+        user: user,
+        errorMessage: null,
+      );
+
+      return user;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString(),
+      );
+      return null;
+    }
+  }
+
+  /// LOGOUT
   Future<void> logout() async {
     await _authRepository.logout();
     state = AuthState.initial;

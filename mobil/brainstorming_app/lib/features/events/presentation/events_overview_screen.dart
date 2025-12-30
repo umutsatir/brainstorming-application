@@ -1,141 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../data/repository/event_manager_repository.dart';
 import 'event_teams_screen.dart';
 import 'event_topics_screen.dart';
 import 'event_sessions_screen.dart';
 
-/// ---- UI MODEL (şimdilik sadece frontend için) ----
-enum EventStatus { planned, live, completed, archived }
-
-class UiEventSummary {
-  final int id;
-  final String name;
-  final String description;
-  final String ownerName;
-  final DateTime startDate;
-  final DateTime endDate;
-  final EventStatus status;
-  final int topicsCount;
-  final int teamsCount;
-  final int sessionsCount;
-  final int totalIdeas;
-
-  const UiEventSummary({
-    required this.id,
-    required this.name,
-    required this.description,
-    required this.ownerName,
-    required this.startDate,
-    required this.endDate,
-    required this.status,
-    required this.topicsCount,
-    required this.teamsCount,
-    required this.sessionsCount,
-    required this.totalIdeas,
-  });
-
-  // 🔹 BUNU EKLE
-  UiEventSummary copyWith({
-    String? name,
-    String? description,
-    String? ownerName,
-    DateTime? startDate,
-    DateTime? endDate,
-    EventStatus? status,
-    int? topicsCount,
-    int? teamsCount,
-    int? sessionsCount,
-    int? totalIdeas,
-  }) {
-    return UiEventSummary(
-      id: id, // id değişmiyor
-      name: name ?? this.name,
-      description: description ?? this.description,
-      ownerName: ownerName ?? this.ownerName,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
-      status: status ?? this.status,
-      topicsCount: topicsCount ?? this.topicsCount,
-      teamsCount: teamsCount ?? this.teamsCount,
-      sessionsCount: sessionsCount ?? this.sessionsCount,
-      totalIdeas: totalIdeas ?? this.totalIdeas,
-    );
-  }
-}
-
-
-/// ---- DUMMY DATA (initial) ----
-final List<UiEventSummary> _dummyEvents = [
-  UiEventSummary(
-    id: 1,
-    name: 'Q3 Innovation Ideathon',
-    description:
-        'Company-wide ideathon to generate ideas for Q3 product and growth initiatives.',
-    ownerName: 'Alex Morgan',
-    startDate: DateTime(2025, 7, 10),
-    endDate: DateTime(2025, 7, 12),
-    status: EventStatus.live,
-    topicsCount: 6,
-    teamsCount: 8,
-    sessionsCount: 12,
-    totalIdeas: 320,
-  ),
-  UiEventSummary(
-    id: 2,
-    name: 'UX Redesign 2.0 Workshop',
-    description:
-        'Cross-functional workshop focused on improving onboarding and mobile UX.',
-    ownerName: 'Sarah Lee',
-    startDate: DateTime(2025, 6, 20),
-    endDate: DateTime(2025, 6, 20),
-    status: EventStatus.completed,
-    topicsCount: 4,
-    teamsCount: 5,
-    sessionsCount: 7,
-    totalIdeas: 185,
-  ),
-  UiEventSummary(
-    id: 3,
-    name: 'Customer Centricity Sprint',
-    description:
-        'Two-day sprint to rethink support flows and retention strategies.',
-    ownerName: 'Michael Chen',
-    startDate: DateTime(2025, 8, 5),
-    endDate: DateTime(2025, 8, 6),
-    status: EventStatus.planned,
-    topicsCount: 3,
-    teamsCount: 4,
-    sessionsCount: 0,
-    totalIdeas: 0,
-  ),
-  UiEventSummary(
-    id: 4,
-    name: 'Internal Hackathon 2024 Review',
-    description:
-        'Review and follow-up for last year’s hackathon projects and learnings.',
-    ownerName: 'HR & Ops',
-    startDate: DateTime(2024, 11, 1),
-    endDate: DateTime(2024, 11, 2),
-    status: EventStatus.archived,
-    topicsCount: 5,
-    teamsCount: 10,
-    sessionsCount: 15,
-    totalIdeas: 420,
-  ),
-];
-
-/// ---- EKRAN ----
 /// Bu ekran Event Manager için tüm ideathon / workshop event’lerini listeleyen ana ekran.
-class EventsOverviewScreen extends StatefulWidget {
+class EventsOverviewScreen extends ConsumerStatefulWidget {
   const EventsOverviewScreen({super.key});
 
   @override
-  State<EventsOverviewScreen> createState() => _EventsOverviewScreenState();
+  ConsumerState<EventsOverviewScreen> createState() =>
+      _EventsOverviewScreenState();
 }
 
-class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
-  // Artık filtreler bu liste üzerinden çalışıyor
-  late List<UiEventSummary> _allEvents;
+class _EventsOverviewScreenState
+    extends ConsumerState<EventsOverviewScreen> {
+  /// Backend’ten gelen event’lerin local kopyası
+  List<UiEventSummary> _allEvents = [];
+
+  bool _isLoading = false;
+  Object? _error;
 
   String _searchQuery = '';
   EventStatus? _statusFilter; // null -> All
@@ -144,15 +30,32 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
   @override
   void initState() {
     super.initState();
-    _allEvents = List<UiEventSummary>.from(_dummyEvents);
+    _loadEvents();
   }
 
-  int get _nextEventId {
-    var maxId = 0;
-    for (final e in _allEvents) {
-      if (e.id > maxId) maxId = e.id;
+  Future<void> _loadEvents() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final repo = ref.read(eventManagerRepositoryProvider);
+      final events = await repo.getAllEvents();
+      setState(() {
+        _allEvents = events;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
-    return maxId + 1;
   }
 
   List<UiEventSummary> get _filteredEvents {
@@ -267,14 +170,18 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showCreateOrEditDialog({UiEventSummary? existing}) async {
+  /// Create / Edit dialog – sadece form verisini döner,
+  /// backend çağrısını dışarıda yapıyoruz.
+  Future<Map<String, String>?> _showCreateOrEditDialog({
+    UiEventSummary? existing,
+  }) async {
     final nameController = TextEditingController(text: existing?.name ?? '');
     final descController =
         TextEditingController(text: existing?.description ?? '');
     final ownerController =
         TextEditingController(text: existing?.ownerName ?? '');
 
-    final result = await showDialog<UiEventSummary>(
+    final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
@@ -307,8 +214,8 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Dates, status and metrics are dummy for now and will be\n'
-                  'connected to backend in a later phase.',
+                  'Dates, status and metrics are currently controlled by the backend.\n'
+                  'This dialog only edits basic info.',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -331,32 +238,11 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
                     ? 'Unknown owner'
                     : ownerController.text.trim();
 
-                if (existing == null) {
-                  final now = DateTime.now();
-                  Navigator.of(context).pop(
-                    UiEventSummary(
-                      id: _nextEventId,
-                      name: name,
-                      description: desc,
-                      ownerName: owner,
-                      startDate: now,
-                      endDate: now.add(const Duration(days: 1)),
-                      status: EventStatus.planned,
-                      topicsCount: 0,
-                      teamsCount: 0,
-                      sessionsCount: 0,
-                      totalIdeas: 0,
-                    ),
-                  );
-                } else {
-                  Navigator.of(context).pop(
-                    existing.copyWith(
-                      name: name,
-                      description: desc,
-                      ownerName: owner,
-                    ),
-                  );
-                }
+                Navigator.of(context).pop(<String, String>{
+                  'name': name,
+                  'description': desc,
+                  'ownerName': owner,
+                });
               },
               child: const Text('Save'),
             ),
@@ -365,25 +251,119 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
       },
     );
 
-    if (result != null) {
-      setState(() {
-        if (existing == null) {
-          _allEvents.add(result);
-        } else {
-          final idx =
-              _allEvents.indexWhere((e) => e.id == existing.id);
-          if (idx != -1) {
-            _allEvents[idx] = result;
-          }
-        }
-      });
-      _showSnack(
-        context,
-        existing == null ? 'Event created (dummy).' : 'Event updated (dummy).',
+    return result;
+  }
+
+  Future<void> _handleCreateEvent() async {
+    final form = await _showCreateOrEditDialog();
+    if (form == null) return;
+
+    final repo = ref.read(eventManagerRepositoryProvider);
+
+    try {
+      await repo.createEvent(
+        name: form['name']!,
+        description: form['description']!,
       );
+      _showSnack(context, 'Event created.');
+      await _loadEvents();
+    } catch (e) {
+      _showSnack(context, 'Failed to create event: $e');
     }
   }
-  
+
+  Future<void> _handleEditEvent(UiEventSummary event) async {
+    final form = await _showCreateOrEditDialog(existing: event);
+    if (form == null) return;
+
+    final repo = ref.read(eventManagerRepositoryProvider);
+
+    try {
+      await repo.updateEvent(
+        eventId: event.id,
+        name: form['name'],
+        description: form['description'],
+      );
+      _showSnack(context, 'Event updated.');
+      await _loadEvents();
+    } catch (e) {
+      _showSnack(context, 'Failed to update event: $e');
+    }
+  }
+
+  Future<void> _handleArchiveEvent(UiEventSummary event) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Archive event'),
+        content: Text(
+          'Are you sure you want to archive "${event.name}"?\n'
+          'Participants will no longer be able to join new sessions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final repo = ref.read(eventManagerRepositoryProvider);
+
+    try {
+      await repo.archiveEvent(event.id);
+      _showSnack(context, 'Event archived.');
+      await _loadEvents();
+    } catch (e) {
+      _showSnack(context, 'Failed to archive event: $e');
+    }
+  }
+
+  Future<void> _handleDeleteEvent(UiEventSummary event) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete event'),
+        content: Text(
+          'This will permanently delete "${event.name}" and its sessions.\n'
+          'Are you sure?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final repo = ref.read(eventManagerRepositoryProvider);
+
+    try {
+      await repo.deleteEvent(event.id);
+      _showSnack(context, 'Event deleted.');
+      await _loadEvents();
+    } catch (e) {
+      _showSnack(context, 'Failed to delete event: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final events = _filteredEvents;
@@ -393,7 +373,7 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
         title: const Text('Events'),
         actions: [
           TextButton.icon(
-            onPressed: () => _showCreateOrEditDialog(),
+            onPressed: _handleCreateEvent,
             icon: const Icon(Icons.add),
             label: const Text('Create event'),
           ),
@@ -566,106 +546,160 @@ class _EventsOverviewScreenState extends State<EventsOverviewScreen> {
 
           // Event list
           Expanded(
-            child: events.isEmpty
-                ? const Center(
+            child: Builder(
+              builder: (context) {
+                if (_isLoading) {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+
+                if (_error != null) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Failed to load events.',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _error.toString(),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(height: 8),
+                          OutlinedButton.icon(
+                            onPressed: _loadEvents,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (events.isEmpty) {
+                  return const Center(
                     child: Text(
                       'No events match your filters.\nTry changing search text or status.',
                       textAlign: TextAlign.center,
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      return _EventCard(
-                        event: event,
-                        dateRange: _formatDateRange(event.startDate, event.endDate),
-                        statusLabel: _statusLabel(event.status),
-                        statusChipColor: _statusChipColor(event.status, context),
-                        statusTextColor: _statusTextColor(event.status, context),
-                        onActionSelected: (action) async {
-                          // 🔹 Manage topics
-                          if (action == 'Manage topics') {
-                            final updatedTopicsCount =
-                                await Navigator.of(context).push<int>(
-                              MaterialPageRoute(
-                                builder: (_) => EventTopicsScreen(
-                                  eventId: event.id,
-                                  eventName: event.name,
-                                  initialTopicsCount: event.topicsCount,
-                                ),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    return _EventCard(
+                      event: event,
+                      dateRange:
+                          _formatDateRange(event.startDate, event.endDate),
+                      statusLabel: _statusLabel(event.status),
+                      statusChipColor:
+                          _statusChipColor(event.status, context),
+                      statusTextColor:
+                          _statusTextColor(event.status, context),
+                      onActionSelected: (action) async {
+                        // ---- Edit / Archive / Delete ----
+                        if (action == 'Edit event') {
+                          await _handleEditEvent(event);
+                          return;
+                        }
+                        if (action == 'Archive event') {
+                          await _handleArchiveEvent(event);
+                          return;
+                        }
+                        if (action == 'Delete event') {
+                          await _handleDeleteEvent(event);
+                          return;
+                        }
+
+                        // ---- Manage topics ----
+                        if (action == 'Manage topics') {
+                          final updatedTopicsCount =
+                              await Navigator.of(context).push<int>(
+                            MaterialPageRoute(
+                              builder: (_) => EventTopicsScreen(
+                                eventId: event.id,
+                                eventName: event.name,
+                                initialTopicsCount: event.topicsCount,
                               ),
-                            );
-
-                            if (updatedTopicsCount != null) {
-                              setState(() {
-                                final idx =
-                                    _dummyEvents.indexWhere((e) => e.id == event.id);
-                                if (idx != -1) {
-                                  _dummyEvents[idx] = _dummyEvents[idx].copyWith(
-                                    topicsCount: updatedTopicsCount,
-                                  );
-                                }
-                              });
-                            }
-                            return;
-                          }
-
-                          // 🔹 Manage teams
-                          if (action == 'Manage teams') {
-                            final updatedTeamsCount =
-                                await Navigator.of(context).push<int>(
-                              MaterialPageRoute(
-                                builder: (_) => EventTeamsScreen(
-                                  eventId: event.id,
-                                  eventName: event.name,
-                                  initialTeamsCount: event.teamsCount,
-                                ),
-                              ),
-                            );
-
-                            if (updatedTeamsCount != null) {
-                              setState(() {
-                                final idx =
-                                    _dummyEvents.indexWhere((e) => e.id == event.id);
-                                if (idx != -1) {
-                                  _dummyEvents[idx] = _dummyEvents[idx].copyWith(
-                                    teamsCount: updatedTeamsCount,
-                                  );
-                                }
-                              });
-                            }
-                            return;
-                          }
-                          if (action == 'View sessions') {
-                            await Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => EventSessionsScreen(
-                                  eventId: event.id,
-                                  eventName: event.name,
-                                ),
-                              ),
-                            );
-
-                            // Geri döndüğünde istersen refresh yapabilirsin:
-                            setState(() {}); // backend bağlandığında sessions sayısını güncellemek için kullanılabilir
-                            return;
-                          }
-
-
-                          // 🔹 Diğer işlemler (Edit / Archive / Delete vs.)
-                          _showSnack(
-                            context,
-                            '"$action" for "${event.name}" (dummy).',
+                            ),
                           );
-                        },
-                      );
 
-                    },
-                    separatorBuilder: (_, __) =>
-                        const SizedBox(height: 12),
-                    itemCount: events.length,
-                  ),
+                          if (updatedTopicsCount != null) {
+                            setState(() {
+                              final idx = _allEvents
+                                  .indexWhere((e) => e.id == event.id);
+                              if (idx != -1) {
+                                _allEvents[idx] = _allEvents[idx].copyWith(
+                                  topicsCount: updatedTopicsCount,
+                                );
+                              }
+                            });
+                          }
+                          return;
+                        }
+
+                        // ---- Manage teams ----
+                        if (action == 'Manage teams') {
+                          final updatedTeamsCount =
+                              await Navigator.of(context).push<int>(
+                            MaterialPageRoute(
+                              builder: (_) => EventTeamsScreen(
+                                eventId: event.id,
+                                eventName: event.name,
+                                initialTeamsCount: event.teamsCount,
+                              ),
+                            ),
+                          );
+
+                          if (updatedTeamsCount != null) {
+                            setState(() {
+                              final idx = _allEvents
+                                  .indexWhere((e) => e.id == event.id);
+                              if (idx != -1) {
+                                _allEvents[idx] = _allEvents[idx].copyWith(
+                                  teamsCount: updatedTeamsCount,
+                                );
+                              }
+                            });
+                          }
+                          return;
+                        }
+
+                        if (action == 'View sessions') {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => EventSessionsScreen(
+                                eventId: event.id,
+                                eventName: event.name,
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        // Diğer aksiyonlar olursa
+                        _showSnack(
+                          context,
+                          '"$action" for "${event.name}" (not implemented).',
+                        );
+                      },
+                    );
+                  },
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 12),
+                  itemCount: events.length,
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -803,8 +837,6 @@ class _EventCard extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             // Küçük metrikler (topics / teams / sessions / ideas)
-            // Küçük metrikler (topics / teams / sessions / ideas)
-            // Row yerine Wrap kullanıyoruz ki dar ekranda alt satıra geçebilsin.
             Wrap(
               spacing: 8,
               runSpacing: 4,
@@ -842,19 +874,11 @@ class _EventCard extends StatelessWidget {
                   icon: const Icon(Icons.group),
                   label: const Text('Manage teams'),
                 ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => EventSessionsScreen(
-                            eventId: event.id,
-                            eventName: event.name,
-                          ),
-                        ),
-                      );
-                    },
+                OutlinedButton.icon(
+                  onPressed: () => onActionSelected('View sessions'),
+                  icon: const Icon(Icons.table_view),
                   label: const Text('View sessions'),
-                  ),
+                ),
               ],
             ),
           ],

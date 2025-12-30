@@ -5,7 +5,12 @@ import '../../../../core/models/user.dart';
 /// ------------------------------------------------------------
 /// TEAM LEADER OVERVIEW SCREEN
 /// ------------------------------------------------------------
-
+/// Not:
+///  - upcomingSessions / completedSessions / totalIdeas şu an dummy.
+///  - Phase 3’te bunları örneğin:
+///      GET /api/sessions         (team leader’ın takımı için)
+///      GET /api/ideas?sessionId=
+///    gibi endpoint’lerden hesaplayabilirsin.
 class TeamLeaderOverviewScreen extends StatelessWidget {
   final AppUser user;
   final VoidCallback onOpenCurrentSession;

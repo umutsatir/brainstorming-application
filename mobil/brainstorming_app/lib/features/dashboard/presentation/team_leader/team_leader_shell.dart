@@ -1,16 +1,16 @@
 import 'package:brainstorming_app/features/settings/prestentation/settings_screen.dart';
 import 'package:flutter/material.dart';
 
-import '../../../../core/models/user.dart';
 import '../../../../core/enums/user_role.dart';
+import '../../../../core/models/user.dart';
 
 // 6-3-5 leader live session ekranı
-import '../../../live_session/presentation/leader_session_screen.dart';
-
+import '../team_leader/team_leader_session_screen.dart';
 // Team leader UI ekranları
 import 'team_leader_overview_screen.dart';
 import 'team_leader_session_history_screen.dart';
 import 'team_leader_my_team_screen.dart';
+import '../../../../data/repository/session_repository.dart';
 
 /// ------------------------------------------------------------
 /// TEAM LEADER SHELL
@@ -29,14 +29,16 @@ class TeamLeaderShell extends StatefulWidget {
 class _TeamLeaderShellState extends State<TeamLeaderShell> {
   int _selectedIndex = 0;
 
-  // Şimdilik dummy config – Phase 3’te backend’den gelecek
-  late final UiLeaderLiveSessionConfig _dummySessionConfig;
+  /// Şu anda açılacak live session’ın config’i.
+  /// İlk açılışta dummy; Session History’den bir session seçildiğinde
+  /// gerçek sessionId, topic, eventName ile güncelliyoruz.
+  late UiLeaderLiveSessionConfig _currentSessionConfig;
 
   @override
   void initState() {
     super.initState();
 
-    _dummySessionConfig = const UiLeaderLiveSessionConfig(
+    _currentSessionConfig = const UiLeaderLiveSessionConfig(
       sessionId: 1,
       teamId: 42,
       eventName: 'Q1 Growth Strategy 6-3-5',
@@ -76,12 +78,27 @@ class _TeamLeaderShellState extends State<TeamLeaderShell> {
     Navigator.of(context).pop(); // drawer'ı kapat
   }
 
-  /// History’den “Go to live session” gelince çağrılacak
+  /// History’den “Go to live session” gelince çağrılacak.
+  ///
+  /// Not:
+  ///  - Şu an UiLeaderSessionHistoryItem içinde teamName / teamSize / roundDuration
+  ///    bilgileri yok; bu yüzden bunlara dummy değerler veriyoruz.
+  ///  - Ama sessionId, topicTitle, eventName ve totalRounds backend’den geldiği için
+  ///    LeaderSessionScreen backend çağrılarını doğru sessionId ile yapabiliyor.
   void _openLiveSessionFromHistory(UiLeaderSessionHistoryItem item) {
     setState(() {
       _selectedIndex = 1; // Current Session tab
-      // Phase 3’te: seçilen item.sessionId’yi state/providera yazıp,
-      // LeaderSessionScreen config’ini dinamik yapacağız.
+
+      _currentSessionConfig = UiLeaderLiveSessionConfig(
+        sessionId: item.sessionId,
+        teamId: 1, // TODO: backend teamId alanı geldiğinde burayı güncelle
+        eventName: item.eventName,
+        topicTitle: item.topicTitle,
+        teamName: 'Your team', // TODO: gerçek team adı
+        teamSize: 6, // TODO: gerçek team size
+        totalRounds: item.totalRounds > 0 ? item.totalRounds : 5,
+        roundDurationSeconds: 300, // TODO: backend’den süre gelirse kullan
+      );
     });
 
     ScaffoldMessenger.of(context)
@@ -89,7 +106,7 @@ class _TeamLeaderShellState extends State<TeamLeaderShell> {
       ..showSnackBar(
         SnackBar(
           content: Text(
-            'Opening live session #${item.sessionId} (dummy – Current Session tab).',
+            'Opening live session #${item.sessionId}...',
           ),
         ),
       );
@@ -119,7 +136,7 @@ class _TeamLeaderShellState extends State<TeamLeaderShell> {
           ),
 
           // 1 - Current Session (Leader live session)
-          LeaderSessionScreen(config: _dummySessionConfig),
+          LeaderSessionScreen(config: _currentSessionConfig),
 
           // 2 - Session History
           TeamLeaderSessionHistoryScreen(

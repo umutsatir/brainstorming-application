@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 /// Tek bir 6-3-5 session için rapor / özet ekranı (Leader tarafı).
+///
 /// Phase 3’te:
-/// - GET /reports/sessions/{sessionId}
-/// - GET /sessions/{sessionId}
+///   - GET /reports/sessions/{sessionId}
+///   - GET /api/sessions/{sessionId}
+///   - (gerekirse) GET /api/ideas?sessionId={id}
 /// çağrılarından gelen detaylarla dolduracaksın.
 class LeaderSessionReportScreen extends StatelessWidget {
   final int sessionId;
@@ -37,7 +39,8 @@ class LeaderSessionReportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final statusColor = isCompleted ? Colors.green[700] : theme.colorScheme.primary;
+    final statusColor =
+        isCompleted ? Colors.green[700] : theme.colorScheme.primary;
     final statusLabel = isCompleted ? 'Completed' : 'In progress';
 
     return Scaffold(
@@ -101,7 +104,8 @@ class LeaderSessionReportScreen extends StatelessWidget {
                       eventName,
                       style: TextStyle(
                         fontSize: 13,
-                        color: theme.colorScheme.onSurface.withOpacity(0.8),
+                        color:
+                            theme.colorScheme.onSurface.withOpacity(0.8),
                       ),
                     ),
                     const SizedBox(height: 8),

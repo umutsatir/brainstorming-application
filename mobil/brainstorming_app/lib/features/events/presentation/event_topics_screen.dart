@@ -1,87 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// ---- UI MODELLERİ (global topics) ----
+import '../../../../data/repository/event_manager_repository.dart';
 
-enum TopicStatus { open, inProgress, closed, archived }
-
-class UiTopicSummary {
-  final int id;
-  final String title;
-  final String description;
-  final String ownerName;
-  final DateTime createdAt;
-  final TopicStatus status;
-  final int teamsCount;
-  final int ideasCount;
-
-  const UiTopicSummary({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.ownerName,
-    required this.createdAt,
-    required this.status,
-    required this.teamsCount,
-    required this.ideasCount,
-  });
-}
-
-/// ---- GLOBAL DUMMY TOPIC KATALOĞU ----
-/// (Gerçekte backend'den gelecek)
-final List<UiTopicSummary> _allDummyTopics = [
-  UiTopicSummary(
-    id: 1,
-    title: 'Q3 Marketing Strategy',
-    description:
-        'Ideas for the upcoming Q3 campaign across digital, offline and partnerships.',
-    ownerName: 'Alex Morgan',
-    createdAt: DateTime(2025, 7, 1),
-    status: TopicStatus.open,
-    teamsCount: 4,
-    ideasCount: 96,
-  ),
-  UiTopicSummary(
-    id: 2,
-    title: 'Onboarding UX 2.0',
-    description:
-        'Redesign the first-time user experience for the mobile app.',
-    ownerName: 'Sarah Lee',
-    createdAt: DateTime(2025, 6, 28),
-    status: TopicStatus.inProgress,
-    teamsCount: 3,
-    ideasCount: 54,
-  ),
-  UiTopicSummary(
-    id: 3,
-    title: 'Customer Retention Experiments',
-    description:
-        'Brainstorm retention experiments for high-value customers.',
-    ownerName: 'Michael Chen',
-    createdAt: DateTime(2025, 6, 20),
-    status: TopicStatus.closed,
-    teamsCount: 2,
-    ideasCount: 40,
-  ),
-  UiTopicSummary(
-    id: 4,
-    title: 'Internal Tools Cleanup',
-    description: 'Identify redundant internal tools and propose migration.',
-    ownerName: 'Ops Team',
-    createdAt: DateTime(2025, 5, 10),
-    status: TopicStatus.archived,
-    teamsCount: 1,
-    ideasCount: 18,
-  ),
-];
-
-/// ---- EVENT → TOPIC ASSIGNMENT HARİTASI ----
-/// eventId -> topicId set’i
-final Map<int, Set<int>> _eventTopicAssignments = {};
-
-/// ---- EKRAN ----
-/// Sadece mevcut topic’leri bu event’e assign / unassign eder.
-/// Topic create / edit yok; onlar global Topics ekranında.
-class EventTopicsScreen extends StatefulWidget {
+class EventTopicsScreen extends ConsumerStatefulWidget {
   final int eventId;
   final String eventName;
   final int initialTopicsCount; // Events overview’dan gelen sayı
@@ -94,23 +16,61 @@ class EventTopicsScreen extends StatefulWidget {
   });
 
   @override
-  State<EventTopicsScreen> createState() => _EventTopicsScreenState();
+  ConsumerState<EventTopicsScreen> createState() =>
+      _EventTopicsScreenState();
 }
 
-class _EventTopicsScreenState extends State<EventTopicsScreen> {
+class _EventTopicsScreenState extends ConsumerState<EventTopicsScreen> {
   String _searchQuery = '';
   TopicStatus? _statusFilter; // null -> All
   String _sortKey = 'Relevance';
 
-  Set<int> get _assignedIds {
-    return _eventTopicAssignments[widget.eventId] ?? <int>{};
-  }
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  List<UiTopicSummary> _allTopics = [];
+  Set<int> _assignedIds = <int>{};
 
   int get _assignedCount => _assignedIds.length;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadTopics();
+  }
+
+  Future<void> _loadTopics() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final repo = ref.read(eventManagerRepositoryProvider);
+      final allTopics = await repo.getAllTopics();
+      final assignedIds =
+          await repo.getAssignedTopicIds(widget.eventId);
+
+      setState(() {
+        _allTopics = allTopics;
+        _assignedIds = assignedIds;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   /// Arama + filtre + sort sonrası tüm topicler
   List<UiTopicSummary> get _filteredAll {
-    var list = List<UiTopicSummary>.from(_allDummyTopics);
+    var list = List<UiTopicSummary>.from(_allTopics);
 
     // Arama
     if (_searchQuery.trim().isNotEmpty) {
@@ -203,18 +163,8 @@ class _EventTopicsScreenState extends State<EventTopicsScreen> {
 
   String _formatDate(DateTime dt) {
     const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     final day = dt.day.toString().padLeft(2, '0');
     final month = months[dt.month - 1];
@@ -222,17 +172,47 @@ class _EventTopicsScreenState extends State<EventTopicsScreen> {
     return '$month $day, $year';
   }
 
-  void _toggleAssign(UiTopicSummary topic) {
-    setState(() {
-      final set =
-          _eventTopicAssignments.putIfAbsent(widget.eventId, () => <int>{});
+  Future<void> _toggleAssign(UiTopicSummary topic) async {
+    final repo = ref.read(eventManagerRepositoryProvider);
+    final isAssigned = _assignedIds.contains(topic.id);
 
-      if (set.contains(topic.id)) {
-        set.remove(topic.id); // UNASSIGN
-      } else {
-        set.add(topic.id); // ASSIGN
-      }
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    try {
+      if (isAssigned) {
+        await repo.unassignTopicFromEvent(
+          eventId: widget.eventId,
+          topicId: topic.id,
+        );
+        setState(() {
+          _assignedIds.remove(topic.id);
+        });
+        _showSnack('Removed "${topic.title}" from this event.');
+      } else {
+        await repo.assignTopicToEvent(
+          eventId: widget.eventId,
+          topicId: topic.id,
+        );
+        setState(() {
+          _assignedIds.add(topic.id);
+        });
+        _showSnack('Assigned "${topic.title}" to this event.');
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString();
+      });
+      _showSnack('Failed to update topics: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   void _showSnack(String msg) {
@@ -263,6 +243,20 @@ class _EventTopicsScreenState extends State<EventTopicsScreen> {
             onPressed: _returnAndPop,
           ),
           title: Text('Assign topics – ${widget.eventName}'),
+          actions: [
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+              ),
+          ],
         ),
         body: Column(
           children: [
@@ -317,6 +311,31 @@ class _EventTopicsScreenState extends State<EventTopicsScreen> {
                       setState(() => _searchQuery = value);
                     },
                   ),
+                  if (_errorMessage != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Failed to load topics: $_errorMessage',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.error,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: _loadTopics,
+                          child: const Text(
+                            'Retry',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -434,100 +453,96 @@ class _EventTopicsScreenState extends State<EventTopicsScreen> {
             const Divider(height: 1),
             // ---- Gövde: assigned card + available list ----
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  // Assigned topics card
-                  Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                    ),
-                    child: Padding(
+              child: _isLoading && _allTopics.isEmpty
+                  ? const Center(child: CircularProgressIndicator())
+                  : ListView(
                       padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Assigned topics',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                      children: [
+                        // Assigned topics card
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: BorderSide(
+                              color: theme.colorScheme.outlineVariant,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          if (assigned.isEmpty)
-                            Text(
-                              'No topics are assigned to this event yet.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7),
-                              ),
-                            )
-                          else
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                for (final topic in assigned)
-                                  _AssignedTopicChip(
-                                    topic: topic,
-                                    onUnassign: () {
-                                      _toggleAssign(topic);
-                                      _showSnack(
-                                        'Removed "${topic.title}" from this event.',
-                                      );
-                                    },
+                                const Text(
+                                  'Assigned topics',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                if (assigned.isEmpty)
+                                  Text(
+                                    'No topics are assigned to this event yet.',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.7),
+                                    ),
+                                  )
+                                else
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      for (final topic in assigned)
+                                        _AssignedTopicChip(
+                                          topic: topic,
+                                          onUnassign: () {
+                                            _toggleAssign(topic);
+                                          },
+                                        ),
+                                    ],
                                   ),
                               ],
                             ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Available topics header
-                  const Text(
-                    'Available topics',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  if (available.isEmpty)
-                    const Text(
-                      'No more topics available with current filters.',
-                      style: TextStyle(fontSize: 12),
-                    )
-                  else
-                    ...[
-                      const SizedBox(height: 4),
-                      for (final topic in available) ...[
-                        _AssignTopicCard(
-                          topic: topic,
-                          statusLabel: _statusLabel(topic.status),
-                          statusChipColor:
-                              _statusChipColor(topic.status, context),
-                          statusTextColor:
-                              _statusTextColor(topic.status, context),
-                          formattedDate: _formatDate(topic.createdAt),
-                          onAssign: () {
-                            _toggleAssign(topic);
-                            _showSnack(
-                              'Assigned "${topic.title}" to this event.',
-                            );
-                          },
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
+                        // Available topics header
+                        const Text(
+                          'Available topics',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (available.isEmpty)
+                          const Text(
+                            'No more topics available with current filters.',
+                            style: TextStyle(fontSize: 12),
+                          )
+                        else ...[
+                          const SizedBox(height: 4),
+                          for (final topic in available) ...[
+                            _AssignTopicCard(
+                              topic: topic,
+                              statusLabel: _statusLabel(topic.status),
+                              statusChipColor:
+                                  _statusChipColor(topic.status, context),
+                              statusTextColor:
+                                  _statusTextColor(topic.status, context),
+                              formattedDate:
+                                  _formatDate(topic.createdAt),
+                              onAssign: () {
+                                _toggleAssign(topic);
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ],
                       ],
-                    ],
-                ],
-              ),
+                    ),
             ),
           ],
         ),
@@ -582,7 +597,7 @@ class _AssignedTopicChip extends StatelessWidget {
   }
 }
 
-/// ---- Available topic kartı (sadece Assign butonu var) ----
+/// ---- Available topic kartı ----
 class _AssignTopicCard extends StatelessWidget {
   final UiTopicSummary topic;
   final String statusLabel;
