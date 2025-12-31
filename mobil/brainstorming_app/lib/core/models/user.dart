@@ -20,21 +20,32 @@ class AppUser {
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
+    // 🔍 Debug için bir kere log atalım
+    // print('[AppUser.fromJson] raw json: $json');
+
+    // id her türlü stringe çevriliyor
+    final id = json['id']?.toString() ?? '';
+
+    // full name için olası tüm key’leri deniyoruz
+    final rawName = json['fullName'] ??
+        json['full_name'] ??      // <-- backend snake_case ise bunu da yakala
+        json['name'] ??
+        json['username'] ??
+        '';
+
+    final name = rawName.toString();
+
     return AppUser(
-      id: json['id']?.toString() ?? '',
-      // Auth endpointlerinde fullName geçiyor
-      name: json['fullName'] ??
-          json['name'] ??
-          json['username'] ??
-          '',
-      email: json['email'],
+      id: id,
+      name: name,
+      email: json['email']?.toString(),
       role: _parseRole(json['role']),
       status: json['status']?.toString(),
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'])
+          ? DateTime.tryParse(json['created_at'].toString())
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'])
+          ? DateTime.tryParse(json['updated_at'].toString())
           : null,
     );
   }
@@ -44,7 +55,7 @@ class AppUser {
       'id': id,
       'fullName': name,
       'email': email,
-      'role': role.name, // backend değerlerine göre gerekirse mapping
+      'role': role.name,
       'status': status,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),

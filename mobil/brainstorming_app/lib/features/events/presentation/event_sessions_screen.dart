@@ -5,7 +5,6 @@ import '../../reports/presentation/reports_screen.dart';
 import '../../../../data/repository/event_manager_repository.dart';
 
 /// Belirli bir event için tüm 6-3-5 oturumlarını Event Manager gözünden gösterir.
-
 class EventSessionsScreen extends ConsumerStatefulWidget {
   final int eventId;
   final String eventName;
@@ -44,6 +43,8 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
 
     try {
       final repo = ref.read(eventManagerRepositoryProvider);
+      // PDF’teki endpoint’e göre EventManagerRepository.getEventSessionsForEvent
+      // zaten backend’e bağlı.
       final sessions =
           await repo.getEventSessionsForEvent(widget.eventId);
 
@@ -162,8 +163,8 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
     if (dt == null) return '--';
     final h = dt.hour.toString().padLeft(2, '0');
     final m = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day.toString().padLeft(2, '0')}.'
-        '${dt.month.toString().padLeft(2, '0')}.'
+    return '${dt.day.toString().padLeft(2, '0')}'
+        '.${dt.month.toString().padLeft(2, '0')}.'
         '${dt.year} $h:$m';
   }
 
@@ -176,6 +177,73 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  /// Menü ve bottom-sheet’ten gelen tüm aksiyonları,
+  /// PDF’teki EM endpoint’lerine bağlayan tek yer.
+  Future<void> _handleSessionAction(
+    UiEventSession s,
+    String action,
+  ) async {
+    final repo = ref.read(eventManagerRepositoryProvider);
+
+    // Navigation aksiyonları (backend çağrısı yok)
+    if (action == 'View AI summary') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ReportsScreen(initialEventId: s.eventId),
+        ),
+      );
+      return;
+    }
+
+    if (action == 'View in Reports') {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ReportsScreen(initialEventId: s.eventId),
+        ),
+      );
+      return;
+    }
+
+    if (action == 'Open live monitor') {
+      // Buraya sessionId ile monitor screen push’layabilirsin.
+      _showSnack(
+        'Open live monitor for "${s.teamName}" (route TODO).',
+      );
+      return;
+    }
+
+    // Backend aksiyonları
+    try {
+      if (action == 'Start session now') {
+        await repo.startSessionNow(s.id);
+        _showSnack('Session #${s.id} started.');
+      } else if (action == 'Pause session') {
+        await repo.pauseSession(s.id);
+        _showSnack('Session #${s.id} paused.');
+      } else if (action == 'End session (force)') {
+        await repo.forceEndSession(s.id);
+        _showSnack('Session #${s.id} ended (force).');
+      } else if (action == 'Cancel session') {
+        await repo.cancelSession(s.id);
+        _showSnack('Session #${s.id} cancelled.');
+      } else if (action == 'Request AI summary') {
+        await repo.requestAiSummaryForSession(s.id);
+        _showSnack('Requested AI summary for session #${s.id}.');
+      } else if (action == 'Delete record') {
+        await repo.deleteSessionRecord(s.id);
+        _showSnack('Deleted session record #${s.id}.');
+      } else {
+        _showSnack('Action "$action" not implemented.');
+        return;
+      }
+
+      // Başarılı ise listeyi tazele
+      await _loadSessions();
+    } catch (e) {
+      _showSnack('Failed to perform "$action": $e');
+    }
   }
 
   void _openDetailsSheet(UiEventSession s) {
@@ -355,30 +423,35 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Start session #${s.id} now (EM override – TODO: backend).',
+                            _handleSessionAction(
+                              s,
+                              'Start session now',
                             );
                           },
-                          icon: const Icon(Icons.play_circle_outline),
+                          icon:
+                              const Icon(Icons.play_circle_outline),
                           label: const Text('Start session now'),
                         ),
                       if (s.status == SessionStatus.live)
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Pause live session #${s.id} (EM override – TODO: backend).',
+                            _handleSessionAction(
+                              s,
+                              'Pause session',
                             );
                           },
-                          icon: const Icon(Icons.pause_circle_outline),
+                          icon:
+                              const Icon(Icons.pause_circle_outline),
                           label: const Text('Pause session'),
                         ),
                       if (s.status == SessionStatus.live)
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Open live monitor for "${s.teamName}" (TODO: route).',
+                            _handleSessionAction(
+                              s,
+                              'Open live monitor',
                             );
                           },
                           icon: const Icon(Icons.monitor_heart),
@@ -388,12 +461,9 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ReportsScreen(
-                                  initialEventId: s.eventId,
-                                ),
-                              ),
+                            _handleSessionAction(
+                              s,
+                              'View AI summary',
                             );
                           },
                           icon: const Icon(Icons.auto_awesome),
@@ -404,8 +474,9 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         OutlinedButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Request AI summary for session #${s.id} (TODO: backend).',
+                            _handleSessionAction(
+                              s,
+                              'Request AI summary',
                             );
                           },
                           icon:
@@ -415,12 +486,9 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                       OutlinedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pop();
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ReportsScreen(
-                                initialEventId: s.eventId,
-                              ),
-                            ),
+                          _handleSessionAction(
+                            s,
+                            'View in Reports',
                           );
                         },
                         icon: const Icon(Icons.table_view),
@@ -430,8 +498,9 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         TextButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Force end live session #${s.id} (TODO: backend).',
+                            _handleSessionAction(
+                              s,
+                              'End session (force)',
                             );
                           },
                           icon: Icon(
@@ -449,8 +518,9 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         TextButton.icon(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            _showSnack(
-                              'Cancel scheduled session #${s.id} (TODO: backend).',
+                            _handleSessionAction(
+                              s,
+                              'Cancel session',
                             );
                           },
                           icon: Icon(
@@ -706,7 +776,7 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Küçük summary chip card (değişmeden bırakıyorum)
+                  // Summary chip card
                   Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -836,59 +906,7 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
                         formattedEnd: _formatDateTime(s.endedAt),
                         onTap: () => _openDetailsSheet(s),
                         onActionSelected: (action) {
-                          // Burada da arka planı bağlamak istersen
-                          // repository üzerinden EM override’lar yazabilirsin.
-                          if (action == 'Open live monitor') {
-                            _showSnack(
-                              'Open live monitor for "${s.teamName}" (TODO: route).',
-                            );
-                          } else if (action ==
-                              'End session (force)') {
-                            _showSnack(
-                              'Force end session #${s.id} (TODO: backend).',
-                            );
-                          } else if (action == 'Cancel session') {
-                            _showSnack(
-                              'Cancel scheduled session #${s.id} (TODO: backend).',
-                            );
-                          } else if (action == 'Delete record') {
-                            _showSnack(
-                              'Delete session record #${s.id} (TODO: backend).',
-                            );
-                          } else if (action ==
-                              'Start session now') {
-                            _showSnack(
-                              'Start session #${s.id} now (EM override – TODO: backend).',
-                            );
-                          } else if (action ==
-                              'Pause session') {
-                            _showSnack(
-                              'Pause live session #${s.id} (TODO: backend).',
-                            );
-                          } else if (action ==
-                              'View AI summary') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ReportsScreen(
-                                  initialEventId: s.eventId,
-                                ),
-                              ),
-                            );
-                          } else if (action ==
-                              'Request AI summary') {
-                            _showSnack(
-                              'Request AI summary for session #${s.id} (TODO: backend).',
-                            );
-                          } else if (action ==
-                              'View in Reports') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ReportsScreen(
-                                  initialEventId: s.eventId,
-                                ),
-                              ),
-                            );
-                          }
+                          _handleSessionAction(s, action);
                         },
                       );
                     },
@@ -903,7 +921,7 @@ class _EventSessionsScreenState extends ConsumerState<EventSessionsScreen> {
   }
 }
 
-/// ---- Yardımcı widget’lar (Aynen bırakıyorum) ----
+/// ---- Yardımcı widget’lar ----
 
 class _SessionCard extends StatelessWidget {
   final UiEventSession session;
@@ -1048,7 +1066,8 @@ class _SessionCard extends StatelessWidget {
                         ),
                       );
 
-                      if (session.status == SessionStatus.scheduled) {
+                      if (session.status ==
+                          SessionStatus.scheduled) {
                         items.addAll([
                           const PopupMenuItem(
                             value: 'Start session now',

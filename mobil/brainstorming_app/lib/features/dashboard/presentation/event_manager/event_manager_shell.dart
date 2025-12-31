@@ -10,7 +10,6 @@ import '../../../../core/enums/user_role.dart';
 
 import '../../../events/presentation/events_overview_screen.dart';
 import '../../../teams/presentation/team_management_screen.dart';
-import '../../../topics/presentation/topics_management_screen.dart';
 import '../../../participants/presentation/participants_screen.dart';
 import '../../../reports/presentation/reports_screen.dart';
 
@@ -37,15 +36,15 @@ class _EventManagerShellState extends State<EventManagerShell> {
         return 'Dashboard Overview';
       case 1:
         return 'Events';
-      case 2:
-        return 'Topics';
+      // // case 2:
+      // //   return 'Topics';
+      // case 2:
+      //   return 'Teams';
       case 3:
-        return 'Teams';
-      case 4:
         return 'Participants';
-      case 5:
+      case 4:
         return 'Reports & AI Summaries';
-      case 6:
+      case 5:
         return 'Settings';
       default:
         return 'Dashboard';
@@ -81,10 +80,10 @@ class _EventManagerShellState extends State<EventManagerShell> {
           const EventsOverviewScreen(),
 
           // 2 - Global Topics list (event bağımsız master topics)
-          const TopicsManagementScreen(),
+          // const TopicsManagementScreen(),
 
           // 3 - Global Teams management
-          const TeamManagementScreen(),
+          // const TeamManagementScreen(),
 
           // 4 - Participants
           const ParticipantsScreen(),
@@ -150,36 +149,36 @@ class _EventManagerDrawer extends StatelessWidget {
                     isSelected: selectedIndex == 1,
                     onTap: () => onSelect(1),
                   ),
+                  // _DrawerItem(
+                  //   icon: Icons.lightbulb_outline,
+                  //   title: 'Topics',
+                  //   isSelected: selectedIndex == 2,
+                  //   onTap: () => onSelect(2),
+                  // ),
+                  // _DrawerItem(
+                  //   icon: Icons.groups_2_outlined,
+                  //   title: 'Teams',
+                  //   isSelected: selectedIndex == 2,
+                  //   onTap: () => onSelect(2),
+                  // ),
                   _DrawerItem(
-                    icon: Icons.lightbulb_outline,
-                    title: 'Topics',
+                    icon: Icons.people_outline,
+                    title: 'Participants',
                     isSelected: selectedIndex == 2,
                     onTap: () => onSelect(2),
                   ),
                   _DrawerItem(
-                    icon: Icons.groups_2_outlined,
-                    title: 'Teams',
-                    isSelected: selectedIndex == 3,
-                    onTap: () => onSelect(3),
-                  ),
-                  _DrawerItem(
-                    icon: Icons.people_outline,
-                    title: 'Participants',
-                    isSelected: selectedIndex == 4,
-                    onTap: () => onSelect(4),
-                  ),
-                  _DrawerItem(
                     icon: Icons.analytics,
                     title: 'Reports & AI Summaries',
-                    isSelected: selectedIndex == 5,
-                    onTap: () => onSelect(5),
+                    isSelected: selectedIndex == 3,
+                    onTap: () => onSelect(3),
                   ),
                   const Divider(),
                   _DrawerItem(
                     icon: Icons.settings_outlined,
                     title: 'Settings',
-                    isSelected: selectedIndex == 6,
-                    onTap: () => onSelect(6),
+                    isSelected: selectedIndex == 4,
+                    onTap: () => onSelect(4),
                   ),
                 ],
               ),

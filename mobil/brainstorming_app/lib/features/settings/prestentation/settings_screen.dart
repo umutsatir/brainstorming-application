@@ -6,8 +6,8 @@ import '../../auth/controller/auth_controller.dart'; // yolu projene göre düze
 import '../../../core/models/user.dart';
 import '../../../core/enums/user_role.dart';
 
-import 'settings_change_name_screen.dart';
-import 'settings_change_password_screen.dart';
+// import 'settings_change_name_screen.dart';
+// import 'settings_change_password_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   final AppUser user;
@@ -160,22 +160,22 @@ class SettingsScreen extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.person_outline),
-                  title: const Text('Change display name'),
-                  subtitle: const Text('Update how your name is shown'),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SettingsChangeNameScreen(
-                          currentName: user.name,
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                // ListTile(
+                //   leading: const Icon(Icons.person_outline),
+                //   title: const Text('Change display name'),
+                //   subtitle: const Text('Update how your name is shown'),
+                //   onTap: () {
+                //     Navigator.of(context).push(
+                //       MaterialPageRoute(
+                //         builder: (_) => SettingsChangeNameScreen(
+                //           currentName: user.name,
+                //         ),
+                //       ),
+                //     );
+                //   },
+                // ),
                 const Divider(height: 1),
-                ListTile(
+                /*ListTile(
                   leading: const Icon(Icons.lock_outline),
                   title: const Text('Change password'),
                   subtitle: const Text('Update your account password'),
@@ -186,7 +186,7 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     );
                   },
-                ),
+                ),*/
               ],
             ),
           ),

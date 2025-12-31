@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/foundation.dart'; // kDebugMode
 
 import '../controller/auth_controller.dart';
 import '../../dashboard/presentation/dashboard_screen.dart';
 
-import '../../../core/enums/user_role.dart';
 import '../../../core/models/user.dart';
-import 'signup_screen.dart'; // 🔹 Yeni: SignUp import
+import 'signup_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -21,9 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   late final TextEditingController _emailController;
   late final TextEditingController _passwordController;
-
-  // 🔹 Debug için seçilebilir rol (sadece kDebugMode'da kullanılacak)
-  UserRole _debugSelectedRole = UserRole.teamMember;
 
   @override
   void initState() {
@@ -60,33 +55,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
 
-    // 🔹 Login state değişince navigation + error snackbar
+    // Login state değişince navigation + error snackbar
     ref.listen<AuthState>(authControllerProvider, (previous, next) {
       // Login başarılı → dashboard'a git
       if (previous?.user != next.user && next.user != null) {
-        final originalUser = next.user!;
-
-        // 🔹 Debug modda rolü override ediyoruz
-        final AppUser effectiveUser = kDebugMode
-            ? AppUser(
-                id: originalUser.id,
-                name: originalUser.name,
-                email: originalUser.email,
-                role: _debugSelectedRole,
-                status: originalUser.status,
-                createdAt: originalUser.createdAt,
-                updatedAt: originalUser.updatedAt,
-              )
-            : originalUser;
+        final AppUser user = next.user!; // 🔹 Artık direkt backend'deki rolü kullanıyoruz
 
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => DashboardScreen(user: effectiveUser),
+            builder: (_) => DashboardScreen(user: user),
           ),
         );
       }
 
-      // Hata varsa snackbar göster (errorMessage kullanıyoruz!)
+      // Hata varsa snackbar göster
       if (next.errorMessage != null &&
           next.errorMessage!.isNotEmpty &&
           next.errorMessage != previous?.errorMessage) {
@@ -168,39 +150,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     },
                   ),
 
-                  // 🔹 DEBUG ROLE DROPDOWN (Sadece debug build'de)
-                  if (kDebugMode) ...[
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<UserRole>(
-                      value: _debugSelectedRole,
-                      decoration: const InputDecoration(
-                        labelText: 'Debug role override',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: const [
-                        DropdownMenuItem(
-                          value: UserRole.eventManager,
-                          child: Text('Event Manager'),
-                        ),
-                        DropdownMenuItem(
-                          value: UserRole.teamLeader,
-                          child: Text('Team Leader'),
-                        ),
-                        DropdownMenuItem(
-                          value: UserRole.teamMember,
-                          child: Text('Team Member'),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() {
-                            _debugSelectedRole = val;
-                          });
-                        }
-                      },
-                    ),
-                  ],
-
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 48,
@@ -217,7 +166,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
 
                   const SizedBox(height: 16),
-                  // 🔹 Sign Up link
+                  // Sign Up link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

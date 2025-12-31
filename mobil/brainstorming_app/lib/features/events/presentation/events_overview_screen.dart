@@ -5,18 +5,17 @@ import '../../../../data/repository/event_manager_repository.dart';
 import 'event_teams_screen.dart';
 import 'event_topics_screen.dart';
 import 'event_sessions_screen.dart';
+import 'create_event_screen.dart'; // 
 
 /// Bu ekran Event Manager için tüm ideathon / workshop event’lerini listeleyen ana ekran.
 class EventsOverviewScreen extends ConsumerStatefulWidget {
   const EventsOverviewScreen({super.key});
 
   @override
-  ConsumerState<EventsOverviewScreen> createState() =>
-      _EventsOverviewScreenState();
+  ConsumerState<EventsOverviewScreen> createState() => _EventsOverviewScreenState();
 }
 
-class _EventsOverviewScreenState
-    extends ConsumerState<EventsOverviewScreen> {
+class _EventsOverviewScreenState extends ConsumerState<EventsOverviewScreen> {
   /// Backend’ten gelen event’lerin local kopyası
   List<UiEventSummary> _allEvents = [];
 
@@ -131,8 +130,8 @@ class _EventsOverviewScreenState
         return 'Live';
       case EventStatus.completed:
         return 'Completed';
-      case EventStatus.archived:
-        return 'Archived';
+      // case EventStatus.archived:
+      //   return 'Archived';
     }
   }
 
@@ -145,8 +144,8 @@ class _EventsOverviewScreenState
         return Colors.green.withOpacity(0.12);
       case EventStatus.completed:
         return Colors.blueGrey.withOpacity(0.12);
-      case EventStatus.archived:
-        return Colors.grey.withOpacity(0.18);
+      // case EventStatus.archived:
+      //   return Colors.grey.withOpacity(0.18);
     }
   }
 
@@ -156,11 +155,11 @@ class _EventsOverviewScreenState
       case EventStatus.planned:
         return theme.colorScheme.primary;
       case EventStatus.live:
-        return Colors.green[700] ?? Colors.green;
+        return (Colors.green[700]) ?? Colors.green;
       case EventStatus.completed:
-        return Colors.blueGrey[700] ?? Colors.blueGrey;
-      case EventStatus.archived:
-        return Colors.grey[800] ?? Colors.grey;
+        return (Colors.blueGrey[700]) ?? Colors.blueGrey;
+      // case EventStatus.archived:
+      //   return (Colors.grey[800]) ?? Colors.grey;
     }
   }
 
@@ -170,23 +169,21 @@ class _EventsOverviewScreenState
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  /// Create / Edit dialog – sadece form verisini döner,
+  /// Edit dialog – sadece name/description döner.
   /// backend çağrısını dışarıda yapıyoruz.
-  Future<Map<String, String>?> _showCreateOrEditDialog({
-    UiEventSummary? existing,
+  Future<Map<String, String>?> _showEditDialog({
+    required UiEventSummary existing,
   }) async {
-    final nameController = TextEditingController(text: existing?.name ?? '');
+    final nameController = TextEditingController(text: existing.name);
     final descController =
-        TextEditingController(text: existing?.description ?? '');
-    final ownerController =
-        TextEditingController(text: existing?.ownerName ?? '');
+        TextEditingController(text: existing.description);
 
     final result = await showDialog<Map<String, String>>(
       context: context,
       builder: (context) {
         final theme = Theme.of(context);
         return AlertDialog(
-          title: Text(existing == null ? 'Create event' : 'Edit event'),
+          title: const Text('Edit event'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -206,15 +203,8 @@ class _EventsOverviewScreenState
                   maxLines: 2,
                 ),
                 const SizedBox(height: 8),
-                TextField(
-                  controller: ownerController,
-                  decoration: const InputDecoration(
-                    labelText: 'Owner name',
-                  ),
-                ),
-                const SizedBox(height: 8),
                 Text(
-                  'Dates, status and metrics are currently controlled by the backend.\n'
+                  'Start/end dates, status and metrics are controlled by backend.\n'
                   'This dialog only edits basic info.',
                   style: theme.textTheme.bodySmall,
                 ),
@@ -234,14 +224,10 @@ class _EventsOverviewScreenState
                 final desc = descController.text.trim().isEmpty
                     ? 'No description yet.'
                     : descController.text.trim();
-                final owner = ownerController.text.trim().isEmpty
-                    ? 'Unknown owner'
-                    : ownerController.text.trim();
 
                 Navigator.of(context).pop(<String, String>{
                   'name': name,
                   'description': desc,
-                  'ownerName': owner,
                 });
               },
               child: const Text('Save'),
@@ -254,26 +240,22 @@ class _EventsOverviewScreenState
     return result;
   }
 
+  /// 🟢 Artık create işlemi, dokümana uygun tam form kullanan
+  /// CreateEventScreen üzerinden yapılıyor.
   Future<void> _handleCreateEvent() async {
-    final form = await _showCreateOrEditDialog();
-    if (form == null) return;
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => const CreateEventScreen(),
+      ),
+    );
 
-    final repo = ref.read(eventManagerRepositoryProvider);
-
-    try {
-      await repo.createEvent(
-        name: form['name']!,
-        description: form['description']!,
-      );
-      _showSnack(context, 'Event created.');
+    if (created == true) {
       await _loadEvents();
-    } catch (e) {
-      _showSnack(context, 'Failed to create event: $e');
     }
   }
 
   Future<void> _handleEditEvent(UiEventSummary event) async {
-    final form = await _showCreateOrEditDialog(existing: event);
+    final form = await _showEditDialog(existing: event);
     if (form == null) return;
 
     final repo = ref.read(eventManagerRepositoryProvider);
@@ -283,6 +265,7 @@ class _EventsOverviewScreenState
         eventId: event.id,
         name: form['name'],
         description: form['description'],
+        // ownerName artık buradan değişmiyor; backend’e bırakıyoruz.
       );
       _showSnack(context, 'Event updated.');
       await _loadEvents();
@@ -291,40 +274,40 @@ class _EventsOverviewScreenState
     }
   }
 
-  Future<void> _handleArchiveEvent(UiEventSummary event) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Archive event'),
-        content: Text(
-          'Are you sure you want to archive "${event.name}"?\n'
-          'Participants will no longer be able to join new sessions.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Archive'),
-          ),
-        ],
-      ),
-    );
+  // Future<void> _handleArchiveEvent(UiEventSummary event) async {
+  //   final confirm = await showDialog<bool>(
+  //     context: context,
+  //     builder: (context) => AlertDialog(
+  //       title: const Text('Archive event'),
+  //       content: Text(
+  //         'Are you sure you want to archive "${event.name}"?\n'
+  //         'Participants will no longer be able to join new sessions.',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(false),
+  //           child: const Text('Cancel'),
+  //         ),
+  //         TextButton(
+  //           onPressed: () => Navigator.of(context).pop(true),
+  //           child: const Text('Archive'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
 
-    if (confirm != true) return;
+  //   if (confirm != true) return;
 
-    final repo = ref.read(eventManagerRepositoryProvider);
+  //   final repo = ref.read(eventManagerRepositoryProvider);
 
-    try {
-      await repo.archiveEvent(event.id);
-      _showSnack(context, 'Event archived.');
-      await _loadEvents();
-    } catch (e) {
-      _showSnack(context, 'Failed to archive event: $e');
-    }
-  }
+  //   try {
+  //     await repo.archiveEvent(event.id);
+  //     _showSnack(context, 'Event archived.');
+  //     await _loadEvents();
+  //   } catch (e) {
+  //     _showSnack(context, 'Failed to archive event: $e');
+  //   }
+  // }
 
   Future<void> _handleDeleteEvent(UiEventSummary event) async {
     final confirm = await showDialog<bool>(
@@ -457,16 +440,16 @@ class _EventsOverviewScreenState
                                       onTap: () => Navigator.of(context)
                                           .pop(EventStatus.completed),
                                     ),
-                                    ListTile(
-                                      leading: _statusFilter ==
-                                              EventStatus.archived
-                                          ? const Icon(Icons.check)
-                                          : const SizedBox(width: 24),
-                                      title: const Text('Archived'),
-                                      onTap: () => Navigator.of(context)
-                                          .pop(EventStatus.archived),
-                                    ),
-                                    const SizedBox(height: 12),
+                                    // ListTile(
+                                    //   leading: _statusFilter ==
+                                    //           EventStatus.archived
+                                    //       ? const Icon(Icons.check)
+                                    //       : const SizedBox(width: 24),
+                                    //   title: const Text('Archived'),
+                                    //   onTap: () => Navigator.of(context)
+                                    //       .pop(EventStatus.archived),
+                                    // ),
+                                    // const SizedBox(height: 12),
                                   ],
                                 ),
                               );
@@ -611,10 +594,10 @@ class _EventsOverviewScreenState
                           await _handleEditEvent(event);
                           return;
                         }
-                        if (action == 'Archive event') {
-                          await _handleArchiveEvent(event);
-                          return;
-                        }
+                        // if (action == 'Archive event') {
+                        //   await _handleArchiveEvent(event);
+                        //   return;
+                        // }
                         if (action == 'Delete event') {
                           await _handleDeleteEvent(event);
                           return;
@@ -650,16 +633,16 @@ class _EventsOverviewScreenState
                         // ---- Manage teams ----
                         if (action == 'Manage teams') {
                           final updatedTeamsCount =
-                              await Navigator.of(context).push<int>(
-                            MaterialPageRoute(
-                              builder: (_) => EventTeamsScreen(
-                                eventId: event.id,
-                                eventName: event.name,
-                                initialTeamsCount: event.teamsCount,
-                              ),
-                            ),
-                          );
-
+                               await Navigator.push<int>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EventTeamsScreen(
+                                    eventId: event.id,
+                                    eventName: event.name,
+                                    initialTeamsCount: event.teamsCount,
+                                  ),
+                                ),
+                              );
                           if (updatedTeamsCount != null) {
                             setState(() {
                               final idx = _allEvents
@@ -794,10 +777,10 @@ class _EventCard extends StatelessWidget {
                       value: 'Edit event',
                       child: Text('Edit event'),
                     ),
-                    PopupMenuItem(
-                      value: 'Archive event',
-                      child: Text('Archive event'),
-                    ),
+                    // PopupMenuItem(
+                    //   value: 'Archive event',
+                    //   child: Text('Archive event'),
+                    // ),
                     PopupMenuItem(
                       value: 'Delete event',
                       child: Text(

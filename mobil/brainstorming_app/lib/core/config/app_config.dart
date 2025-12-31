@@ -10,6 +10,6 @@ class AppConfig {
 
 final appConfigProvider = Provider<AppConfig>((ref) {
   return const AppConfig(
-    baseUrl: "http://10.0.2.2:8080",
+    baseUrl: "http://10.0.2.2:8080/api",
   );
 });

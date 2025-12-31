@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../data/teams/team_repository.dart ';
+import '../../../../data/repository/team_repository.dart ';
 /// ------------------------------------------------------------
 /// MY TEAM – BACKEND ENTEGRE EKRAN (TeamRepository ile)
 /// ------------------------------------------------------------

@@ -20,7 +20,7 @@ class AuthRepository {
 
     _apiClient.setAuthToken(token);
 
-    final response = await _apiClient.get('/api/auth/profile');
+    final response = await _apiClient.get('/auth/me');
 
     if (response.statusCode == 200) {
       final data = response.data as Map<String, dynamic>;
@@ -40,13 +40,13 @@ class AuthRepository {
     required String password,
   }) async {
     final response = await _apiClient.post(
-      '/api/auth/login',
+      '/auth/login',
       data: {
         'email': email,
         'password': password,
       },
     );
-
+  
     if (response.statusCode == 200) {
       final data = response.data as Map<String, dynamic>;
 
@@ -58,6 +58,7 @@ class AuthRepository {
       }
 
       final user = AppUser.fromJson(userJson);
+      
 
       // Token’ı sakla ve ApiClient’e tanıt
       await _storage.write(key: _tokenKey, value: token);
@@ -82,7 +83,7 @@ class AuthRepository {
     required String fullName,
   }) async {
     final response = await _apiClient.post(
-      '/api/auth/register',
+      '/auth/register',
       data: {
         'email': email,
         'password': password,
@@ -121,7 +122,7 @@ class AuthRepository {
   /// - Sonra her halükarda local token’ı siliyoruz
   Future<void> logout() async {
     try {
-      await _apiClient.post('/api/auth/logout');
+      await _apiClient.post('/auth/logout');
     } catch (_) {
       // Logout çağrısı hata verse bile local’den silmeye devam
     }

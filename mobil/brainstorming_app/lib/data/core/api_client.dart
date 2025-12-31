@@ -1,9 +1,7 @@
-// lib/data/core/api_client.dart
-
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/app_config.dart';  // 🔥 önemli
+import '../../core/config/app_config.dart'; // baseUrl buradan geliyor
 
 class ApiClient {
   final Dio _dio;
@@ -17,31 +15,69 @@ class ApiClient {
             receiveTimeout: const Duration(seconds: 10),
             headers: const {'Content-Type': 'application/json'},
           ),
-        );
+        ) {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          if (_authToken != null && _authToken!.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $_authToken';
+          } else {
+            options.headers.remove('Authorization');
+          }
+          return handler.next(options);
+        },
+      ),
+    );
+  }
 
   void setAuthToken(String? token) {
     _authToken = token;
-    if (token == null) {
+
+    if (token == null || token.isEmpty) {
       _dio.options.headers.remove('Authorization');
     } else {
       _dio.options.headers['Authorization'] = 'Bearer $token';
     }
   }
 
-  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) =>
-      _dio.get(path, queryParameters: queryParameters);
+  Future<Response> get(String path, {Map<String, dynamic>? queryParameters}) {
+    return _dio.get(
+      path.startsWith('/') ? path : '/$path',
+      queryParameters: queryParameters,
+    );
+  }
 
-  Future<Response> post(String path, {dynamic data}) =>
-      _dio.post(path, data: data);
+  Future<Response> post(String path, {dynamic data}) {
+    return _dio.post(
+      path.startsWith('/') ? path : '/$path',
+      data: data,
+    );
+  }
 
-  Future<Response> put(String path, {dynamic data}) =>
-      _dio.put(path, data: data);
+  Future<Response> put(String path, {dynamic data}) {
+    return _dio.put(
+      path.startsWith('/') ? path : '/$path',
+      data: data,
+    );
+  }
 
-  Future<Response> delete(String path, {dynamic data}) =>
-      _dio.delete(path, data: data);
+  /// PATCH desteği (topics için lazım)
+  Future<Response> patch(String path, {dynamic data}) {
+    return _dio.patch(
+      path.startsWith('/') ? path : '/$path',
+      data: data,
+    );
+  }
+
+  Future<Response> delete(String path, {dynamic data}) {
+    return _dio.delete(
+      path.startsWith('/') ? path : '/$path',
+      data: data,
+    );
+  }
 }
 
-/// ApiClient provider → Config'i okuyarak client oluşturuyor
+/// global provider
 final apiClientProvider = Provider<ApiClient>((ref) {
   final config = ref.watch(appConfigProvider);
   return ApiClient(config);

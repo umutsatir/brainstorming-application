@@ -254,7 +254,7 @@ class SessionRepository {
   ///  - sonra JSON içindeki teamId / team_id alanına göre
   ///    client-side filtre yapıyoruz.
   Future<List<UiLeaderSessionHistoryItem>> getTeamSessions(int teamId) async {
-    final response = await _apiClient.get('/api/sessions');
+    final response = await _apiClient.get('/sessions');
 
     if (response.statusCode == 200) {
       final data = response.data;
@@ -305,7 +305,7 @@ class SessionRepository {
   ///  - İstersen query param da kullanabilirsin (memberScope=joined).
   Future<List<UiMemberSessionHistoryItem>> getMySessions() async {
     final response = await _apiClient.get(
-      '/api/sessions',
+      '/sessions',
       queryParameters: {
         'memberScope': 'joined', // backend ister kullanır ister ignore eder
       },
@@ -338,7 +338,7 @@ class SessionRepository {
   /// GET /api/sessions/{sessionId}
   /// → canlı session state’i al (currentRound, status, timerRemaining vs.)
   Future<LeaderLiveSessionState> getLiveSessionState(int sessionId) async {
-    final response = await _apiClient.get('/api/sessions/$sessionId');
+    final response = await _apiClient.get('/sessions/$sessionId');
 
     if (response.statusCode == 200) {
       final data = response.data;
@@ -368,11 +368,11 @@ class SessionRepository {
 
     late final String path;
     if (upper == 'START' || upper == 'RESUME') {
-      path = '/api/sessions/$sessionId/start';
+      path = '/sessions/$sessionId/start';
     } else if (upper == 'PAUSE') {
-      path = '/api/sessions/$sessionId/pause';
+      path = '/sessions/$sessionId/pause';
     } else if (upper == 'END' || upper == 'COMPLETE') {
-      path = '/api/sessions/$sessionId/complete';
+      path = '/sessions/$sessionId/complete';
     } else {
       throw ArgumentError('Unsupported action: $action');
     }
@@ -398,7 +398,7 @@ class SessionRepository {
   /// POST /sessions/{sessionId}/rounds/advance
   Future<LeaderLiveSessionState> advanceRound(int sessionId) async {
     final response =
-        await _apiClient.post('/api/sessions/$sessionId/rounds/advance');
+        await _apiClient.post('/sessions/$sessionId/rounds/advance');
 
     if (response.statusCode == 200) {
       final data = response.data;
@@ -418,7 +418,7 @@ class SessionRepository {
     required int roundNumber,
   }) async {
     final response = await _apiClient.post(
-      '/api/ai/sessions/$sessionId/suggestions',
+      '/ai/sessions/$sessionId/suggestions',
       data: {
         'roundNumber': roundNumber,
       },
